@@ -9,6 +9,8 @@ app.use(express.json());
 
 // Port configuration
 const port = process.env.PORT || 3000;
+const cors = require('cors');
+app.use(cors());
 
 // Start server
 app.listen(port, () => {
