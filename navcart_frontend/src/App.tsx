@@ -1,12 +1,9 @@
-// src/App.jsx
-import Header from './components/Header';
+// src/App.tsx
+import { RouterProvider } from '@tanstack/react-router';
+import { router } from './router';
 
 function App() {
-  return (
-    <div className="min-h-screen bg-gray-100">
-      <Header />
-    </div>
-  );
+  return <RouterProvider router={router} />;
 }
 
 export default App;
