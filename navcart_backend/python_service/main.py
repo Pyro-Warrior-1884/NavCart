@@ -18,9 +18,9 @@ driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "12345678"
 
 
 # Fetching the graph from the Neo4j database
-def fetch_graph():
+def fetch_graph_from_db():
     G = nx.DiGraph()
-    with driver.session() as session:
+    with driver.session(database="neo4j") as session:  # updated here
         result = session.run("""
             MATCH (a:Aisle)-[r:CONNECTED]->(b:Aisle)
             RETURN a.id AS source, b.id AS target, r.distance AS weight
@@ -30,9 +30,10 @@ def fetch_graph():
     return G
 
 
+
 @app.get("/graph")
 def get_graph():
-    G = fetch_graph()
+    G = fetch_graph_from_db()  # ✅ fixed function name
     nodes = [{"id": n} for n in G.nodes()]
     edges = [
         {"source": u, "target": v, "weight": d["weight"]}
@@ -43,7 +44,7 @@ def get_graph():
 
 @app.get("/shortest-path")
 def shortest_path(source: str = Query(...), target: str = Query(...)):
-    G = fetch_graph()
+    G = fetch_graph_from_db()  # ✅ fixed function name
 
     # Validate if source and target nodes exist
     if source not in G.nodes:
@@ -81,6 +82,8 @@ def shortest_path(source: str = Query(...), target: str = Query(...)):
     except nx.NetworkXNoPath:
         return {"error": f"No path found from '{source}' to '{target}'"}
 
+
+# Optional: run with uvicorn
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

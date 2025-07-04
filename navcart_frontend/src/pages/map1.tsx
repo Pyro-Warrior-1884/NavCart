@@ -29,31 +29,35 @@ const Map1: React.FC = () => {
   const [target, setTarget] = useState<string>("");
   const [totalDistance, setTotalDistance] = useState<number | null>(null);
 
+  // Poll graph data every 10s
   useEffect(() => {
-    fetch("http://localhost:8000/graph")
-      .then((res) => res.json())
-      .then((data) => {
-        setNodes(data.nodes);
-        setEdges(data.edges);
-        drawGraph(data.nodes, data.edges, []);
-        setTotalDistance(null);
-      });
-  }, []);
-
-  useEffect(() => {
-    if (source && target) {
-      fetch(`http://localhost:8000/shortest-path?source=${source}&target=${target}`)
+    const fetchGraph = () => {
+      fetch("http://localhost:8000/graph")
         .then((res) => res.json())
         .then((data) => {
-          drawGraph(nodes, edges, data.path || []);
-          if (data.total_weight) {
-            setTotalDistance(data.total_weight);
-          } else {
-            setTotalDistance(null);
-          }
+          setNodes(data.nodes);
+          setEdges(data.edges);
+          drawGraph(data.nodes, data.edges, []);
+          setTotalDistance(null);
         });
-    }
-  }, [edges, nodes, source, target]);
+    };
+
+    fetchGraph(); // initial fetch
+    const intervalId = setInterval(fetchGraph, 10000); // fetch every 10s
+    return () => clearInterval(intervalId);
+  }, []);
+
+  // Update shortest path if source/target are selected
+  useEffect(() => {
+    if (!source || !target) return;
+
+    fetch(`http://localhost:8000/shortest-path?source=${source}&target=${target}`)
+      .then((res) => res.json())
+      .then((data) => {
+        drawGraph(nodes, edges, data.path || []);
+        setTotalDistance(data.total_weight ?? null);
+      });
+  }, [source, target, nodes, edges]);
 
   const drawGraph = (nodes: Node[], edges: Edge[], path: string[]) => {
     const svg = d3.select(svgRef.current);
@@ -76,7 +80,6 @@ const Map1: React.FC = () => {
       .force("charge", d3.forceManyBody().strength(-300))
       .force("center", d3.forceCenter(width / 2, height / 2));
 
-    // Draw links
     const link = svg
       .append("g")
       .selectAll("line")
@@ -93,7 +96,6 @@ const Map1: React.FC = () => {
         path.includes(d.source.id) && path.includes(d.target.id) ? "0" : "4"
       );
 
-    // Draw link weights (edge labels)
     const edgeLabels = svg
       .append("g")
       .selectAll("text")
@@ -109,7 +111,6 @@ const Map1: React.FC = () => {
       .attr("text-anchor", "middle")
       .attr("dy", -5);
 
-    // Draw nodes
     const node = svg
       .append("g")
       .selectAll("circle")
@@ -139,7 +140,6 @@ const Map1: React.FC = () => {
           })
       );
 
-    // Draw labels for nodes
     const label = svg
       .append("g")
       .selectAll("text")
@@ -153,7 +153,6 @@ const Map1: React.FC = () => {
       .attr("dy", ".35em")
       .attr("fill", "#111");
 
-    // Tick update
     simulation.on("tick", () => {
       link
         .attr("x1", (d) => d.source.x!)
@@ -173,6 +172,7 @@ const Map1: React.FC = () => {
   return (
     <div style={{ fontFamily: "sans-serif", padding: "1rem" }}>
       <h2 style={{ marginBottom: "1rem" }}>📍 NavCart Path Finder</h2>
+
       <div style={{ marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "1rem" }}>
         <label>From:</label>
         <select onChange={(e) => setSource(e.target.value)} value={source}>
