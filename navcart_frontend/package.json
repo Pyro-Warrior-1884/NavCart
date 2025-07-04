@@ -12,11 +12,13 @@
   "dependencies": {
     "@tanstack/react-router": "^1.124.0",
     "@tanstack/router-devtools": "^1.124.0",
+    "d3": "^7.9.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.29.0",
+    "@types/d3": "^7.4.3",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.5.2",
