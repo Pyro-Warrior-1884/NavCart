@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 require('dotenv').config();
 const cors = require('cors');
+const token = require('jsonwebtoken');
 
 // Constants
 const saltrounds = 10;
@@ -74,7 +75,7 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ message: "User not found." });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);//Comparing the hashed passwords with the original
+    const isPasswordValid = await bcrypt.compare(password, user.password);//Comparing the hashed passwords with the origin
 
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid password." });
