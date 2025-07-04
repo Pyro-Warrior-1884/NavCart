@@ -49,6 +49,7 @@ app.post('/api/signup', async (req, res) => {
       return res.status(400).json({ message: "User already exists." });
     }
 
+    //This is the hashing spot
     const hashedPassword = await bcrypt.hash(password, saltrounds);
     const newUser = new User({ username, password: hashedPassword });
     await newUser.save();
@@ -73,7 +74,7 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ message: "User not found." });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcrypt.compare(password, user.password);//Comparing the hashed passwords with the original
 
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid password." });
