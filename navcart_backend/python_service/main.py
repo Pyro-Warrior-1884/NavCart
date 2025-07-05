@@ -14,7 +14,7 @@ app.add_middleware(
 )
 
 # Neo4j driver setup
-driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "12345678"))
+driver = GraphDatabase.driver("bolt://neo4j:7687", auth=("neo4j", "12345678"))
 
 
 # Fetching the graph from the Neo4j database
@@ -81,9 +81,3 @@ def shortest_path(source: str = Query(...), target: str = Query(...)):
 
     except nx.NetworkXNoPath:
         return {"error": f"No path found from '{source}' to '{target}'"}
-
-
-# Optional: run with uvicorn
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

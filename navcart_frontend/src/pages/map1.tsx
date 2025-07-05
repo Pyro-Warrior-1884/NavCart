@@ -29,7 +29,6 @@ const Map1: React.FC = () => {
   const [target, setTarget] = useState<string>("");
   const [totalDistance, setTotalDistance] = useState<number | null>(null);
 
-  // Poll graph data every 10s
   useEffect(() => {
     const fetchGraph = () => {
       fetch("http://localhost:8000/graph")
@@ -42,12 +41,11 @@ const Map1: React.FC = () => {
         });
     };
 
-    fetchGraph(); // initial fetch
-    const intervalId = setInterval(fetchGraph, 10000); // fetch every 10s
+    fetchGraph();
+    const intervalId = setInterval(fetchGraph, 10000);
     return () => clearInterval(intervalId);
   }, []);
 
-  // Update shortest path if source/target are selected
   useEffect(() => {
     if (!source || !target) return;
 
@@ -80,21 +78,36 @@ const Map1: React.FC = () => {
       .force("charge", d3.forceManyBody().strength(-300))
       .force("center", d3.forceCenter(width / 2, height / 2));
 
+    const defs = svg.append("defs");
+
+    defs.append("marker")
+      .attr("id", "arrowhead")
+      .attr("viewBox", "-0 -5 10 10")
+      .attr("refX", 22)
+      .attr("refY", 0)
+      .attr("orient", "auto")
+      .attr("markerWidth", 6)
+      .attr("markerHeight", 6)
+      .attr("xoverflow", "visible")
+      .append("svg:path")
+      .attr("d", "M 0,-5 L 10 ,0 L 0,5")
+      .attr("fill", "#999")
+      .style("stroke", "none");
+
     const link = svg
       .append("g")
+      .attr("stroke-linecap", "round")
       .selectAll("line")
       .data(d3Edges)
       .enter()
       .append("line")
       .attr("stroke", (d) =>
-        path.includes(d.source.id) && path.includes(d.target.id) ? "red" : "#ccc"
+        path.includes(d.source.id) && path.includes(d.target.id) ? "#ef4444" : "#bbb"
       )
       .attr("stroke-width", (d) =>
-        path.includes(d.source.id) && path.includes(d.target.id) ? 3 : 1.5
+        path.includes(d.source.id) && path.includes(d.target.id) ? 3 : 2
       )
-      .attr("stroke-dasharray", (d) =>
-        path.includes(d.source.id) && path.includes(d.target.id) ? "0" : "4"
-      );
+      .attr("marker-end", "url(#arrowhead)");
 
     const edgeLabels = svg
       .append("g")
@@ -104,12 +117,9 @@ const Map1: React.FC = () => {
       .append("text")
       .text((d) => d.weight)
       .attr("font-size", 11)
-      .attr("font-family", "sans-serif")
-      .attr("fill", (d) =>
-        path.includes(d.source.id) && path.includes(d.target.id) ? "red" : "#555"
-      )
+      .attr("fill", "#666")
       .attr("text-anchor", "middle")
-      .attr("dy", -5);
+      .attr("dy", -8);
 
     const node = svg
       .append("g")
@@ -117,10 +127,17 @@ const Map1: React.FC = () => {
       .data(nodes)
       .enter()
       .append("circle")
-      .attr("r", 10)
-      .attr("fill", (d) => (path.includes(d.id) ? "#f97316" : "#3b82f6"))
-      .attr("stroke", "#fff")
+      .attr("r", 12)
+      .attr("fill", (d) => (path.includes(d.id) ? "#facc15" : "#60a5fa"))
+      .attr("stroke", "#111")
       .attr("stroke-width", 1.5)
+      .style("cursor", "pointer")
+      .on("mouseover", function () {
+        d3.select(this).transition().duration(200).attr("r", 16);
+      })
+      .on("mouseout", function () {
+        d3.select(this).transition().duration(200).attr("r", 12);
+      })
       .call(
         d3
           .drag<SVGCircleElement, Node>()
@@ -147,11 +164,11 @@ const Map1: React.FC = () => {
       .enter()
       .append("text")
       .text((d) => d.id)
-      .attr("font-size", 13)
+      .attr("font-size", 12)
       .attr("font-family", "sans-serif")
-      .attr("dx", 14)
+      .attr("dx", 18)
       .attr("dy", ".35em")
-      .attr("fill", "#111");
+      .attr("fill", "#222");
 
     simulation.on("tick", () => {
       link
@@ -170,38 +187,77 @@ const Map1: React.FC = () => {
   };
 
   return (
-    <div style={{ fontFamily: "sans-serif", padding: "1rem" }}>
-      <h2 style={{ marginBottom: "1rem" }}>📍 NavCart Path Finder</h2>
+    <div style={{ fontFamily: "Inter, sans-serif", padding: "1.5rem", maxWidth: 1000, margin: "auto" }}>
+      <h2 style={{ marginBottom: "1rem", fontSize: "1.8rem", color: "#111" }}>🧭 NavCart Path Finder</h2>
 
-      <div style={{ marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "1rem" }}>
-        <label>From:</label>
-        <select onChange={(e) => setSource(e.target.value)} value={source}>
-          <option value="">Select</option>
-          {nodes.map((n) => (
-            <option key={n.id} value={n.id}>
-              {n.id}
-            </option>
-          ))}
-        </select>
+      <div
+        style={{
+          marginBottom: "1rem",
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: "1rem",
+        }}
+      >
+        <div>
+          <label style={{ fontWeight: 500 }}>From:</label>
+          <select
+            style={{ marginLeft: "0.5rem", padding: "0.3rem 0.6rem", borderRadius: 6 }}
+            onChange={(e) => setSource(e.target.value)}
+            value={source}
+          >
+            <option value="">Select</option>
+            {nodes.map((n) => (
+              <option key={n.id} value={n.id}>
+                {n.id}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <label>To:</label>
-        <select onChange={(e) => setTarget(e.target.value)} value={target}>
-          <option value="">Select</option>
-          {nodes.map((n) => (
-            <option key={n.id} value={n.id}>
-              {n.id}
-            </option>
-          ))}
-        </select>
+        <div>
+          <label style={{ fontWeight: 500 }}>To:</label>
+          <select
+            style={{ marginLeft: "0.5rem", padding: "0.3rem 0.6rem", borderRadius: 6 }}
+            onChange={(e) => setTarget(e.target.value)}
+            value={target}
+          >
+            <option value="">Select</option>
+            {nodes.map((n) => (
+              <option key={n.id} value={n.id}>
+                {n.id}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {totalDistance !== null && (
-        <div style={{ marginBottom: "1rem", fontSize: "1rem", color: "green" }}>
-          ✅ Total Distance: <strong>{totalDistance}</strong>
+        <div
+          style={{
+            marginBottom: "1rem",
+            fontSize: "1rem",
+            background: "#e0f2fe",
+            padding: "0.6rem 1rem",
+            borderRadius: 8,
+            borderLeft: "4px solid #3b82f6",
+            color: "#0369a1",
+          }}
+        >
+          ✅ Shortest path distance: <strong>{totalDistance}</strong>
         </div>
       )}
 
-      <svg ref={svgRef} width={900} height={600} style={{ border: "1px solid #ddd" }}></svg>
+      <svg
+        ref={svgRef}
+        width={900}
+        height={600}
+        style={{
+          border: "1px solid #e5e7eb",
+          borderRadius: "10px",
+          background: "#f9fafb",
+        }}
+      ></svg>
     </div>
   );
 };
