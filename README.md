@@ -15,7 +15,7 @@ Make sure the following are installed:
 ---
 
 ##  Install Dependencies
-
+*Go to the /auth-service*
 ```bash
 pnpm install
 # or
@@ -29,16 +29,27 @@ create a *.env* file
 connectionString=mongodb://localhost:27017/db_name
 PORT=3000
 ```
-## START MONGODB WITH DOCKER
+## START DOCKER
 ```bash
 docker-compose up -d
 ```
 
 ### RUNNING THE BACKEND
 
+# In the /auth-service
 ```bash
 pnpm run dev
 #or
 pnpm dev
 ```
+# In the /python-service
+```bash
+python main.py
+```
 
+
+## TO RUN EVERYTHING
+
+```bash
+docker-compose up --build
+```
