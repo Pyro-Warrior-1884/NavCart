@@ -4,8 +4,6 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 require('dotenv').config();
 const cors = require('cors');
-const token = require('jsonwebtoken');
-
 // Constants
 const saltrounds = 10;
 

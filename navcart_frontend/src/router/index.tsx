@@ -14,7 +14,6 @@ const rootRoute = createRootRoute({
   component: () => (
     <>
       <Header />
-      <Map1/>
       <Outlet />
     </>
   ),
@@ -34,7 +33,12 @@ const signupRoute = createRoute({
   component: Signup,
 });
 
+const maproute = createRoute({
+  getParentRoute:()=>rootRoute,
+  path:"/map",
+  component:Map1
+})
 // Route tree
-const routeTree = rootRoute.addChildren([loginRoute, signupRoute]);
+const routeTree = rootRoute.addChildren([loginRoute, signupRoute,maproute]);
 
 export const router = createRouter({ routeTree });
