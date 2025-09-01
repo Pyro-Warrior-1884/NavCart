@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Play, RotateCcw, MapPin, ZoomIn, ZoomOut } from 'lucide-react';
 
 const App = () => {
+  // -----------------------------
+  // NODES (unchanged)
+  // -----------------------------
   const nodes = {
     'dairy_top': { x: 130, y: 48, label: 'Dairy' },
     'baby_junction': { x: 333, y: 78, label: 'Baby Section' },
@@ -55,11 +58,14 @@ const App = () => {
     'red_junction_8': { x: 280, y: 400, label: 'Junction 8' }
   };
 
+  // -----------------------------
+  // CONNECTIONS (fixed typos so all keys exist)
+  // -----------------------------
   const connections = {
-    'dairy_top': ['meat_poultry', 'junction_5'],
-    'baby_junction': ['girls_junction', 'junction_5'],
+    'dairy_top': ['meat_poultry', 'red_junction_5'],
+    'baby_junction': ['girls_junction', 'red_junction_5'],
     'baby_shoes': ['boys_junction', 'girls_junction'],
-    'electronics': ['men_junction', 'books'],
+    'electronics': ['men_junction', 'books_junction'],
     'books_junction': ['red_junction_7', 'toys'],
     'toys': ['red_junction_6', 'red_junction_7'],
     'sporting_goods': ['red_junction_6', 'auto_care'],
@@ -70,7 +76,7 @@ const App = () => {
     'meat_poultry': ['dairy_top', 'seafood'],
     'bakery_junction': ['seafood', 'red_junction_1'],
     'girls_junction': ['baby_junction', 'baby_shoes'],
-    'women_junction': ['produce_junction','grocery_mid'],              
+    'women_junction': ['produce_junction','grocery_mid'],
     'boys_junction': ['baby_shoes', 'men_junction'],
     'men_junction': ['boys_junction','electronics'],
     'home_decor': ['red_junction_7', 'home_office'],
@@ -107,164 +113,260 @@ const App = () => {
     'red_junction_8': ['main_entrance', 'deli_entrance']
   };
 
+  // -----------------------------
+  // STATE
+  // -----------------------------
   const [currentPath, setCurrentPath] = useState([]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationStep, setAnimationStep] = useState(0);
   const [selectedSections, setSelectedSections] = useState([]);
   const [zoomLevel, setZoomLevel] = useState(0.8);
   const [Entrance, setEntrance] = useState("");
+  const [isComputing, setIsComputing] = useState(false);
+  const [computeMsg, setComputeMsg] = useState('');
   const storeImageData = "/Walmart.png";
 
-  // -------------------- A* PATHFINDING --------------------
-  const heuristic = (a, b) => {
+  // -----------------------------
+  // GEOMETRY + A* (strictly uses connections)
+  // -----------------------------
+  const distXY = (a, b) => {
     const dx = nodes[a].x - nodes[b].x;
     const dy = nodes[a].y - nodes[b].y;
-    return Math.sqrt(dx * dx + dy * dy);
+    return Math.hypot(dx, dy);
   };
+
+  const heuristic = (a, b) => distXY(a, b);
 
   const findPathAStar = (start, goal) => {
     if (start === goal) return [start];
 
-    const openSet = new Set([start]);
-    const cameFrom = {};
-    const gScore = {};
-    const fScore = {};
+    const open = new Set([start]);
+    const came = {};
+    const g = {};
+    const f = {};
+    const closed = new Set();
 
-    Object.keys(nodes).forEach(node => {
-      gScore[node] = Infinity;
-      fScore[node] = Infinity;
-    });
+    for (const k of Object.keys(nodes)) {
+      g[k] = Infinity;
+      f[k] = Infinity;
+    }
+    g[start] = 0;
+    f[start] = heuristic(start, goal);
 
-    gScore[start] = 0;
-    fScore[start] = heuristic(start, goal);
-
-    while (openSet.size > 0) {
+    while (open.size > 0) {
+      // get node with min f
       let current = null;
-      let minF = Infinity;
-      for (const node of openSet) {
-        if (fScore[node] < minF) {
-          minF = fScore[node];
-          current = node;
+      let bestF = Infinity;
+      for (const n of open) {
+        if (f[n] < bestF) {
+          bestF = f[n];
+          current = n;
         }
       }
 
       if (current === goal) {
-        const path = [];
-        while (current in cameFrom) {
-          path.unshift(current);
-          current = cameFrom[current];
+        const out = [current];
+        while (came[current]) {
+          current = came[current];
+          out.unshift(current);
         }
-        return [start, ...path];
+        return out;
       }
 
-      openSet.delete(current);
-      for (const neighbor of (connections[current] || [])) {
-        if (!nodes[neighbor]) continue;
+      open.delete(current);
+      closed.add(current);
 
-        const tentativeG = gScore[current] + heuristic(current, neighbor);
-        if (tentativeG < gScore[neighbor]) {
-          cameFrom[neighbor] = current;
-          gScore[neighbor] = tentativeG;
-          fScore[neighbor] = tentativeG + heuristic(neighbor, goal);
-          openSet.add(neighbor);
-        }
+      for (const nb of (connections[current] || [])) {
+        if (!nodes[nb]) continue;        // guard: unknown key
+        if (closed.has(nb)) continue;
+
+        const tentative = g[current] + distXY(current, nb); // edge cost = allowed edge length
+        if (!open.has(nb)) open.add(nb);
+        if (tentative >= g[nb]) continue;
+
+        came[nb] = current;
+        g[nb] = tentative;
+        f[nb] = tentative + heuristic(nb, goal);
       }
     }
 
-    return [start];
+    // unreachable
+    return null;
   };
 
-  // -------------------- MULTI-TARGET OPTIMIZATION --------------------
-  const computeOptimizedPath = (start, targets, end) => {
-    const allPoints = [start, ...targets, end];
-    const pathCache = {};
-    const dist = {};
+  // -----------------------------
+  // All-pairs calculator + fast TSP (NN + 2-opt)
+  // -----------------------------
+  const precompute = (points) => {
+    const D = {};
+    const P = {};
+    for (const a of points) { D[a] = {}; P[a] = {}; }
 
-    for (let i = 0; i < allPoints.length; i++) {
-      dist[allPoints[i]] = {};
-      for (let j = 0; j < allPoints.length; j++) {
-        if (i !== j) {
-          const path = findPathAStar(allPoints[i], allPoints[j]);
-          dist[allPoints[i]][allPoints[j]] = path.length;
-          pathCache[`${allPoints[i]}->${allPoints[j]}`] = path;
-        }
+    for (let i = 0; i < points.length; i++) {
+      for (let j = i + 1; j < points.length; j++) {
+        const a = points[i], b = points[j];
+        const path = findPathAStar(a, b);
+        const d = path ? pathDistance(path) : Infinity;
+        D[a][b] = D[b][a] = d;
+        P[a][b] = P[b][a] = path; // may be null if unreachable
       }
     }
+    return { D, P };
+  };
 
-    const n = targets.length;
-    const memo = {};
+  const pathDistance = (path) => {
+    let d = 0;
+    for (let i = 1; i < path.length; i++) d += distXY(path[i-1], path[i]);
+    return d;
+  };
 
-    const dp = (mask, last) => {
-      const key = `${mask}-${last}`;
-      if (memo[key] !== undefined) return memo[key];
-      if (mask === (1 << n) - 1) return dist[targets[last]][end];
-
-      let best = Infinity;
-      for (let next = 0; next < n; next++) {
-        if (!(mask & (1 << next))) {
-          const candidate = dist[targets[last]][targets[next]] + dp(mask | (1 << next), next);
-          best = Math.min(best, candidate);
-        }
+  const nearestNeighborOrder = (start, targets, D) => {
+    const remaining = new Set(targets);
+    const order = [];
+    let cur = start;
+    while (remaining.size) {
+      let best = null, bestD = Infinity;
+      for (const t of remaining) {
+        const dd = D[cur][t];
+        if (dd < bestD) { bestD = dd; best = t; }
       }
-      return memo[key] = best;
+      if (best == null || bestD === Infinity) break; // stop if anything unreachable
+      order.push(best);
+      remaining.delete(best);
+      cur = best;
+    }
+    // If something was unreachable, we stop early; caller will handle
+    return order;
+  };
+
+  const twoOptImprove = (start, seq, D, maxPasses = 2) => {
+    if (seq.length < 3) return seq.slice();
+    let path = seq.slice();
+    let improved = true;
+    let passes = 0;
+
+    const total = (s) => {
+      let acc = D[start][s[0]];
+      for (let i = 0; i < s.length - 1; i++) acc += D[s[i]][s[i+1]];
+      return acc;
     };
 
-    const reconstructPath = (mask, last) => {
-      if (mask === (1 << n) - 1) return [targets[last], end];
-      for (let next = 0; next < n; next++) {
-        if (!(mask & (1 << next))) {
-          const cost = dist[targets[last]][targets[next]] + dp(mask | (1 << next), next);
-          if (cost === dp(mask, last)) {
-            return [targets[last], ...reconstructPath(mask | (1 << next), next)];
+    while (improved && passes < maxPasses) {
+      improved = false;
+      for (let i = 0; i < path.length - 1; i++) {
+        for (let k = i + 1; k < path.length; k++) {
+          const newSeq = path.slice(0, i).concat(path.slice(i, k + 1).reverse(), path.slice(k + 1));
+          if (total(newSeq) + 1e-6 < total(path)) {
+            path = newSeq;
+            improved = true;
           }
         }
       }
-    };
-
-    let minDist = Infinity;
-    let bestOrder = [];
-
-    for (let i = 0; i < n; i++) {
-      const cost = dist[start][targets[i]] + dp(1 << i, i);
-      if (cost < minDist) {
-        minDist = cost;
-        bestOrder = [start, ...reconstructPath(1 << i, i)];
-      }
+      passes++;
     }
-
-    let fullPath = [];
-    for (let i = 0; i < bestOrder.length - 1; i++) {
-      fullPath = [...fullPath, ...pathCache[`${bestOrder[i]}->${bestOrder[i + 1]}`]];
-    }
-
-    return fullPath;
+    return path;
   };
 
-  // -------------------- START NAVIGATION --------------------
-  const startNavigation = () => {
+  // Builds the final full path with checkouts + best exit
+  const computeOptimizedPath = (start, targets) => {
+    setComputeMsg('Building distance cache…');
+    const exits = ['main_entrance', 'left_entrance', 'right_entrance'];
+    const checkouts = ['checkouts_1', 'checkouts_2'];
+
+    const points = [start, ...targets, ...checkouts, ...exits];
+    const { D, P } = precompute(points);
+
+    // Guard: if any target is completely unreachable from start, stop early
+    for (const t of targets) {
+      if (!P[start][t]) throw new Error(`No path from ${nodes[start].label} to ${nodes[t].label}`);
+    }
+
+    setComputeMsg('Finding fast visiting order…');
+    const seed = nearestNeighborOrder(start, targets, D);
+    if (seed.length !== targets.length) {
+      const bad = targets.filter(t => !seed.includes(t));
+      throw new Error(`Unreachable stops: ${bad.map(k => nodes[k].label).join(', ')}`);
+    }
+    const order = twoOptImprove(start, seed, D, 2);
+
+    // Choose nearest checkout from last stop
+    const lastStop = order[order.length - 1] ?? start;
+    let bestCheckout = checkouts[0];
+    let bestCheckoutD = D[lastStop][bestCheckout];
+    for (const c of checkouts) {
+      if (D[lastStop][c] < bestCheckoutD) {
+        bestCheckout = c; bestCheckoutD = D[lastStop][c];
+      }
+    }
+    if (!isFinite(bestCheckoutD)) {
+      throw new Error(`No path from last stop to any checkout.`);
+    }
+
+    // Choose nearest exit from the chosen checkout
+    let bestExit = exits[0];
+    let bestExitD = D[bestCheckout][bestExit];
+    for (const e of exits) {
+      if (D[bestCheckout][e] < bestExitD) {
+        bestExit = e; bestExitD = D[bestCheckout][e];
+      }
+    }
+    if (!isFinite(bestExitD)) {
+      throw new Error(`No path from checkout to any exit.`);
+    }
+
+    // Stitch the full node-by-node path
+    setComputeMsg('Stitching final path…');
+    const stops = [start, ...order, bestCheckout, bestExit];
+    let fullPath = [stops[0]];
+    for (let i = 0; i < stops.length - 1; i++) {
+      const seg = P[stops[i]][stops[i+1]];
+      if (!seg) throw new Error(`No path between ${nodes[stops[i]].label} and ${nodes[stops[i+1]].label}`);
+      fullPath = fullPath.concat(seg.slice(1)); // avoid duplicate node at join
+    }
+
+    return { fullPath, stopOrder: stops };
+  };
+
+  // -----------------------------
+  // UI controls
+  // -----------------------------
+  const startNavigation = async () => {
     if (!Entrance) {
-      alert("⚠ Please select an entrance before starting navigation!");
+      alert('⚠ Please select an entrance before starting navigation!');
       return;
     }
 
-    const shoppingSections = [
-      'dairy_top','baby_junction','baby_shoes','electronics','books_junction','toys','sporting_goods','auto_care','grocery_mid','produce_junction','seafood','meat_poultry','bakery_junction','girls_junction','women_junction','boys_junction','men_junction'
-    ];
+    const shoppingSections = [ 'dairy_top', 'baby_junction', 'baby_shoes', 'electronics', 'books_junction', 'toys', 'sporting_goods', 'auto_care', 'grocery_mid', 'produce_junction', 'seafood', 'meat_poultry', 'bakery_junction', 'girls_junction', 'women_junction', 'boys_junction', 'men_junction', 'home_decor', 'home_office', 'celebrate', 'jeweller', 'storage_laundry', 'home_mid', 'kitchen_dining', 'seasonal', 'fabric', 'bedding', 'paint_hardware', 'bath', 'cosmetics', 'deli_entrance', 'pharmacy', 'hair_salon', 'health_beauty', 'pet_care', 'garden_center' ];
 
-    const optimizedPath = computeOptimizedPath(Entrance, shoppingSections, 'checkouts_1');
-    setSelectedSections([Entrance, ...shoppingSections, 'checkouts_1']);
-    setCurrentPath(optimizedPath);
-    setAnimationStep(0);
-    setIsAnimating(true);
+    setIsComputing(true);
+    setComputeMsg('Starting…');
+
+    
+    setTimeout(() => {
+      try {
+        const { fullPath, stopOrder } = computeOptimizedPath(Entrance, shoppingSections);
+        setSelectedSections(stopOrder); 
+        setCurrentPath(fullPath);
+        setAnimationStep(0);
+        setIsAnimating(true);
+      } catch (err) {
+        console.error(err);
+        alert(`Route error: ${err.message}`);
+      } finally {
+        setIsComputing(false);
+        setComputeMsg('');
+      }
+    }, 30);
   };
 
-  // -------------------- RESET --------------------
   const resetNavigation = () => {
     setCurrentPath([]);
     setSelectedSections([]);
     setAnimationStep(0);
     setIsAnimating(false);
     setEntrance("");
+    setIsComputing(false);
+    setComputeMsg('');
   };
 
   const zoomIn = () => setZoomLevel(prev => Math.min(prev + 0.2, 2.0));
@@ -272,13 +374,16 @@ const App = () => {
 
   useEffect(() => {
     if (isAnimating && animationStep < currentPath.length - 1) {
-      const timer = setTimeout(() => setAnimationStep(prev => prev + 1), 1000);
+      const timer = setTimeout(() => setAnimationStep(prev => prev + 1), 500);
       return () => clearTimeout(timer);
     } else if (isAnimating && animationStep >= currentPath.length - 1) {
       setIsAnimating(false);
     }
   }, [isAnimating, animationStep, currentPath.length]);
 
+  // -----------------------------
+  // STYLES (unchanged)
+  // -----------------------------
   const containerStyle = {
     width: '100%',
     padding: '16px',
@@ -323,10 +428,10 @@ const App = () => {
     borderRadius: '8px',
     overflow: 'hidden',
     margin: '0 auto',
-    width: `${1320 * zoomLevel + 40}px`,  
-    height: `${507 * zoomLevel + 40}px`,  
-    maxWidth: '100%',                     
-    maxHeight: '90vh',                    
+    width: `${1320 * zoomLevel + 40}px`,
+    height: `${507 * zoomLevel + 40}px`,
+    maxWidth: '100%',
+    maxHeight: '90vh',
     transition: 'width 0.3s ease, height 0.3s ease'
   };
 
@@ -341,7 +446,6 @@ const App = () => {
     margin: '20px auto',
     transition: 'width 0.3s ease, height 0.3s ease'
   };
-
 
   return (
     <div style={containerStyle}>
@@ -379,60 +483,55 @@ const App = () => {
         <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
           <button
             onClick={startNavigation}
-            disabled={!Entrance || isAnimating}
+            disabled={!Entrance || isAnimating || isComputing}
             style={{
               ...primaryButtonStyle,
-              opacity: Entrance ? 1 : 0.5,
-              cursor: Entrance ? 'pointer' : 'not-allowed'
+              opacity: Entrance && !isComputing ? 1 : 0.5,
+              cursor: Entrance && !isComputing ? 'pointer' : 'not-allowed'
             }}
           >
             <Play size={16} />
             Start Navigation
           </button>
 
-          <button
-            onClick={resetNavigation}
-            style={secondaryButtonStyle}
-          >
+          <button onClick={resetNavigation} style={secondaryButtonStyle}>
             <RotateCcw size={16} />
             Reset
           </button>
 
-          <button
-            onClick={zoomIn}
-            style={zoomButtonStyle}
-          >
+          <button onClick={zoomIn} style={zoomButtonStyle}>
             <ZoomIn size={16} />
             Zoom In
           </button>
 
-          <button
-            onClick={zoomOut}
-            style={zoomButtonStyle}
-          >
+          <button onClick={zoomOut} style={zoomButtonStyle}>
             <ZoomOut size={16} />
             Zoom Out
           </button>
 
-          <div style={{
-            padding: '8px 12px',
-            backgroundColor: '#f3f4f6',
-            borderRadius: '6px',
-            fontSize: '14px',
-            color: '#374151'
-          }}>
+          <div
+            style={{
+              padding: '8px 12px',
+              backgroundColor: '#f3f4f6',
+              borderRadius: '6px',
+              fontSize: '14px',
+              color: '#374151'
+            }}
+          >
             Zoom: {Math.round(zoomLevel * 100)}%
           </div>
         </div>
 
         {selectedSections.length > 0 && (
-          <div style={{
-            marginBottom: '16px',
-            padding: '12px',
-            backgroundColor: '#dbeafe',
-            border: '1px solid #93c5fd',
-            borderRadius: '8px'
-          }}>
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '12px',
+              backgroundColor: '#dbeafe',
+              border: '1px solid #93c5fd',
+              borderRadius: '8px'
+            }}
+          >
             <h3 style={{ fontWeight: '600', color: '#1e40af', marginBottom: '8px' }}>Shopping Route:</h3>
             <div style={{ fontSize: '14px', color: '#1d4ed8' }}>
               {selectedSections.map(section => nodes[section]?.label).join(' → ')}
@@ -442,6 +541,34 @@ const App = () => {
       </div>
 
       <div style={mapContainerStyle}>
+        {/* loader overlay */}
+        {isComputing && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'rgba(255,255,255,0.8)',
+              zIndex: 200,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexDirection: 'column',
+              gap: 8
+            }}
+          >
+            <div className="spinner" />
+            <div style={{ color: '#111827', fontWeight: 600 }}>{computeMsg || 'Computing route…'}</div>
+            <style>{`
+              .spinner {
+                width: 36px; height: 36px; border: 4px solid #93c5fd;
+                border-top-color: #1d4ed8; border-radius: 50%;
+                animation: spin 0.9s linear infinite;
+              }
+              @keyframes spin { to { transform: rotate(360deg); } }
+            `}</style>
+          </div>
+        )}
+
         <div style={mapBackgroundStyle}>
           {Object.entries(nodes).map(([key, node]) => {
             const isInPath = currentPath.includes(key);
@@ -462,13 +589,7 @@ const App = () => {
               cursor: 'pointer'
             };
 
-            return (
-              <div
-                key={key}
-                style={nodeStyle}
-                title={node.label}
-              />
-            );
+            return <div key={key} style={nodeStyle} title={node.label} />;
           })}
 
           {currentPath.map((nodeKey, index) => {
@@ -476,18 +597,20 @@ const App = () => {
 
             const prevNode = nodes[currentPath[index - 1]];
             const currentNode = nodes[nodeKey];
-
             if (!prevNode || !currentNode) return null;
 
-            const length = Math.sqrt(
-              Math.pow((currentNode.x - prevNode.x) * zoomLevel, 2) +
-              Math.pow((currentNode.y - prevNode.y) * zoomLevel, 2)
+            const length = Math.hypot(
+              (currentNode.x - prevNode.x) * zoomLevel,
+              (currentNode.y - prevNode.y) * zoomLevel
             );
 
-            const angle = Math.atan2(
-              (currentNode.y - prevNode.y) * zoomLevel,
-              (currentNode.x - prevNode.x) * zoomLevel
-            ) * (180 / Math.PI);
+            const angle =
+              (Math.atan2(
+                (currentNode.y - prevNode.y) * zoomLevel,
+                (currentNode.x - prevNode.x) * zoomLevel
+              ) *
+                180) /
+              Math.PI;
 
             const lineStyle = {
               position: 'absolute',
@@ -503,9 +626,7 @@ const App = () => {
               borderRadius: `${2 * zoomLevel}px`
             };
 
-            return (
-              <div key={`path-${index}`} style={lineStyle} />
-            );
+            return <div key={`path-${index}`} style={lineStyle} />;
           })}
 
           {isAnimating && animationStep < currentPath.length && (
@@ -584,13 +705,15 @@ const App = () => {
       </div>
 
       {isAnimating && (
-        <div style={{
-          marginTop: '16px',
-          padding: '16px',
-          backgroundColor: '#f0fdf4',
-          border: '1px solid #bbf7d0',
-          borderRadius: '8px'
-        }}>
+        <div
+          style={{
+            marginTop: '16px',
+            padding: '16px',
+            backgroundColor: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            borderRadius: '8px'
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <div style={{ color: '#15803d', fontWeight: '600' }}>
@@ -607,20 +730,22 @@ const App = () => {
             </div>
           </div>
 
-          <div style={{
-            marginTop: '12px',
-            width: '100%',
-            height: '8px',
-            backgroundColor: '#bbf7d0',
-            borderRadius: '4px',
-            overflow: 'hidden'
-          }}>
+          <div
+            style={{
+              marginTop: '12px',
+              width: '100%',
+              height: '8px',
+              backgroundColor: '#bbf7d0',
+              borderRadius: '4px',
+              overflow: 'hidden'
+            }}
+          >
             <div
               style={{
                 height: '100%',
                 backgroundColor: '#16a34a',
                 borderRadius: '4px',
-                transition: 'width 1s ease',
+                transition: 'width 0.5s ease',
                 width: `${((animationStep + 1) / currentPath.length) * 100}%`
               }}
             />
@@ -632,28 +757,21 @@ const App = () => {
         <p><strong>Instructions:</strong></p>
         <ul style={{ listStyle: 'disc', marginLeft: '20px', marginTop: '8px' }}>
           <li>Use zoom controls to scale the map and navigate</li>
-          <li>White dots represent navigation nodes from your store blueprint</li>
-          <li>Blue dots show the planned route</li>
-          <li>Red lines display the walking path</li>
-          <li>The red marker with location pin shows current position</li>
-          <li>Green 'S' marks the start, Purple 'E' marks the end</li>
+          <li>White dots are navigation nodes (only these connections are valid)</li>
+          <li>Blue dots = nodes on the computed route</li>
+          <li>Red lines = walkable edges between consecutive nodes</li>
+          <li>Green ‘S’ = start, Purple ‘E’ = final exit</li>
         </ul>
       </div>
 
       <style jsx>{`
         @keyframes pulse {
-          0%, 100% {
-            opacity: 1;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 0.8;
-            transform: scale(1.1);
-          }
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.1); }
         }
       `}</style>
     </div>
   );
-}
+};
 
 export default App;
