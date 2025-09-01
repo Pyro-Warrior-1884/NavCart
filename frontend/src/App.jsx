@@ -2,129 +2,110 @@ import React, { useState, useEffect } from 'react';
 import { Play, RotateCcw, MapPin, ZoomIn, ZoomOut } from 'lucide-react';
 
 const App = () => {
-  // Node coordinates based on the exact blueprint analysis
   const nodes = {
-    // Top row nodes (following the white circles in the image)
     'dairy_top': { x: 130, y: 48, label: 'Dairy' },
     'baby_junction': { x: 333, y: 78, label: 'Baby Section' },
-    'baby_shoes': { x: 427, y: 78, label: 'Baby-Shoes' },
-    'electronics': { x: 535, y: 78, label: 'Electronics' },
+    'baby_shoes': { x: 457, y: 78, label: 'Shoes' },
+    'electronics': { x: 600, y: 78, label: 'Electronics' },
     'books_junction': { x: 641, y: 78, label: 'Books' },
-    'toys': { x: 730, y: 78, label: 'Toys' },
-    'sporting_goods': { x: 958, y: 78, label: 'Sporting Goods' },
-    'auto_care': { x: 1118, y: 78, label: 'Auto Care' },
-
-    // Left column nodes
-    'grocery_mid': { x: 51, y: 155, label: 'Grocery' },
-    'produce_junction': { x: 51, y: 310, label: 'Produce' },
+    'toys': { x: 790, y: 78, label: 'Toys' },
+    'sporting_goods': { x: 1030, y: 78, label: 'Sporting Goods' },
+    'auto_care': { x: 1100, y: 80, label: 'Auto Care' },
+    'grocery_mid': { x: 260, y: 185, label: 'Grocery' },
+    'produce_junction': { x: 260, y: 310, label: 'Produce' },
+    'seafood': { x: 51, y: 310, label: 'Sea Food' },
+    'meat_poultry': { x: 51, y: 155, label: 'Meat & Poultry' },
     'bakery_junction': { x: 67, y: 348, label: 'Bakery' },
-
-    // Central area nodes
-    'girls_junction': { x: 260, y: 140, label: 'Girls' },
+    'girls_junction': { x: 365, y: 78, label: 'Girls' },
     'women_junction': { x: 260, y: 268, label: 'Women' },
-    'central_bottom': { x: 257, y: 348, label: 'Central Bottom' },
-
-    // Clothing area nodes
-    'boys_junction': { x: 484, y: 158, label: 'Boys' },
-    'men_junction': { x: 598, y: 158, label: 'Men' },
-    'fitting_left': { x: 484, y: 238, label: 'Fitting Room Left' },
-    'fitting_right': { x: 677, y: 158, label: 'Fitting Room Right' },
+    'boys_junction': { x: 484, y: 80, label: 'Boys' },
+    'men_junction': { x: 570, y: 80, label: 'Men' },
     'fitting_exit': { x: 677, y: 238, label: 'Fitting Room Exit' },
-
-    // Home sections (right side)
-    'home_decor': { x: 739, y: 130, label: 'Home Decor' },
-    'home_office': { x: 739, y: 193, label: 'Home Office' },
-    'celebrate': { x: 739, y: 261, label: 'Celebrate' },
-    'jeweller': { x: 739, y: 304, label: 'Jeweller/Accessories' },
-
+    'home_decor': { x: 677, y: 130, label: 'Home Decor' },
+    'home_office': { x: 677, y: 193, label: 'Home Office' },
+    'celebrate': { x: 677, y: 261, label: 'Celebrate' },
+    'jeweller': { x: 677, y: 304, label: 'Jeweller/Accessories' },
     'storage_laundry': { x: 836, y: 130, label: 'Storage & Laundry' },
     'home_mid': { x: 836, y: 193, label: 'Home Mid' },
     'kitchen_dining': { x: 836, y: 249, label: 'Kitchen & Dining' },
     'seasonal': { x: 836, y: 311, label: 'Seasonal' },
-
-    'fabric': { x: 1052, y: 123, label: 'Fabric' },
-    'bedding': { x: 1052, y: 189, label: 'Bedding' },
-    'bath': { x: 1052, y: 276, label: 'Bath' },
-    'cosmetics': { x: 1052, y: 311, label: 'Cosmetics' },
-
-    // Bottom area nodes
+    'fabric': { x: 1100, y: 123, label: 'Fabric' },
+    'bedding': { x: 1100, y: 189, label: 'Bedding' },
+    'paint_hardware': { x: 1100, y: 159, label: 'Paint & Hardware' },
+    'bath': { x: 1100, y: 276, label: 'Bath' },
+    'cosmetics': { x: 1000, y: 351, label: 'Cosmetics' },
     'deli_entrance': { x: 195, y: 405, label: 'Deli' },
     'main_entrance': { x: 278, y: 423, label: 'Main Entrance' },
     'left_entrance': { x: 170, y: 405, label: 'Left Entrance' },
-    'checkouts_1': { x: 380, y: 355, label: 'Checkouts' },
-    'checkouts_2': { x: 558, y: 423, label: 'Checkouts' },
-    'right_entrance': { x: 810, y: 423, label: 'Right Entrance' },
-    'pharmacy': { x: 839, y: 423, label: 'Pharmacy' },
-    'health_beauty': { x: 1035, y: 433, label: 'Health & Beauty' },
-    'pet_care': { x: 1129, y: 433, label: 'Pet Care' },
-
-    // Red marker positions (special junctions)
+    'checkouts_1': { x: 380, y: 355, label: 'Checkouts 1' },
+    'checkouts_2': { x: 700, y: 355, label: 'Checkouts 2' },
+    'right_entrance': { x: 840, y: 400, label: 'Right Entrance' },
+    'pharmacy': { x: 980, y: 450, label: 'Pharmacy' },
+    'hair_salon': { x: 870, y: 400, label: 'Hair Salon' },
+    'health_beauty': { x: 980, y: 410, label: 'Health & Beauty' },
+    'pet_care': { x: 1102, y: 358, label: 'Pet Care' },
+    'garden_center': { x: 1170, y: 350, label: 'Garden Center' },
     'red_junction_1': { x: 260, y: 358, label: 'Junction 1' },
     'red_junction_2': { x: 677, y: 358, label: 'Junction 2' },
     'red_junction_3': { x: 836, y: 358, label: 'Junction 3' },
-    'red_junction_4': { x: 1102, y: 358, label: 'Junction 4' }
+    'red_junction_4': { x: 1102, y: 340, label: 'Junction 4' },
+    'red_junction_5': { x: 260, y: 80, label: 'Junction 5'},
+    'red_junction_6': { x: 836, y: 80, label: 'Junction 6' },
+    'red_junction_7': { x: 677, y: 80, label: 'Junction 7' },
+    'red_junction_8': { x: 280, y: 400, label: 'Junction 8' }
   };
 
   // Define connections based on the white line connections visible in the blueprint
   const connections = {
-    // Top horizontal connections
-    'dairy_top': ['baby_junction', 'grocery_mid'],
-    'baby_junction': ['dairy_top', 'baby_shoes', 'girls_junction'],
-    'baby_shoes': ['baby_junction', 'electronics'],
-    'electronics': ['baby_shoes', 'books_junction', 'boys_junction'],
-    'books_junction': ['electronics', 'toys'],
-    'toys': ['books_junction', 'sporting_goods', 'home_decor'],
-    'sporting_goods': ['toys', 'auto_care', 'fabric'],
-    'auto_care': ['sporting_goods'],
-
-    // Left vertical connections
-    'grocery_mid': ['dairy_top', 'produce_junction', 'girls_junction'],
-    'produce_junction': ['grocery_mid', 'bakery_junction', 'women_junction'],
-    'bakery_junction': ['produce_junction', 'deli_entrance'],
-
-    // Central vertical connections
-    'girls_junction': ['baby_junction', 'grocery_mid', 'boys_junction', 'women_junction'],
-    'women_junction': ['girls_junction', 'produce_junction', 'fitting_left', 'central_bottom'],
-    'central_bottom': ['women_junction', 'red_junction_1', 'main_entrance'],
-
-    // Clothing area connections
-    'boys_junction': ['girls_junction', 'electronics', 'men_junction', 'fitting_left'],
-    'men_junction': ['boys_junction', 'fitting_right'],
-    'fitting_left': ['boys_junction', 'women_junction', 'fitting_exit'],
-    'fitting_right': ['men_junction', 'fitting_exit', 'home_decor'],
-    'fitting_exit': ['fitting_left', 'fitting_right', 'red_junction_2'],
-
-    // Home sections connections
-    'home_decor': ['toys', 'fitting_right', 'home_office', 'storage_laundry'],
-    'home_office': ['home_decor', 'celebrate', 'home_mid'],
-    'celebrate': ['home_office', 'jeweller', 'kitchen_dining'],
-    'jeweller': ['celebrate', 'seasonal'],
-
-    'storage_laundry': ['home_decor', 'home_mid', 'fabric'],
-    'home_mid': ['storage_laundry', 'home_office', 'kitchen_dining', 'bedding'],
-    'kitchen_dining': ['home_mid', 'celebrate', 'seasonal', 'bath'],
-    'seasonal': ['kitchen_dining', 'jeweller', 'cosmetics'],
-
-    'fabric': ['sporting_goods', 'storage_laundry', 'bedding'],
-    'bedding': ['fabric', 'home_mid', 'bath'],
-    'bath': ['bedding', 'kitchen_dining', 'cosmetics'],
-    'cosmetics': ['bath', 'seasonal', 'health_beauty'],
-
-    // Bottom connections
-    'deli_entrance': ['bakery_junction', 'main_entrance'],
-    'main_entrance': ['deli_entrance', 'central_bottom', 'left_entrance', 'checkouts_1'],
-    'left_entrance': ['main_entrance', 'checkouts_1'],
-    'checkouts_1': ['main_entrance', 'left_entrance', 'right_entrance', 'red_junction_2'],
-    'right_entrance': ['checkouts_2', 'pharmacy'],
-    'pharmacy': ['right_entrance', 'health_beauty'],
-    'health_beauty': ['pharmacy', 'cosmetics', 'pet_care'],
-    'pet_care': ['health_beauty'],
-
-    // Red junction connections (major pathways)
-    'red_junction_1': ['central_bottom', 'red_junction_2'],
-    'red_junction_2': ['red_junction_1', 'fitting_exit', 'checkouts_1', 'red_junction_3'],
-    'red_junction_3': ['red_junction_2', 'seasonal', 'red_junction_4'],
-    'red_junction_4': ['red_junction_3', 'cosmetics']
+    'dairy_top': ['meat_poultry', 'junction_5'],
+    'baby_junction': ['girls_junction', 'junction_5'],
+    'baby_shoes': ['boys_junction', 'girls_junction'],
+    'electronics': ['men_junction', 'books'],
+    'books_junction': ['red_junction_7', 'toys'],
+    'toys': ['red_junction_6', 'red_junction_7'],
+    'sporting_goods': ['red_junction_6', 'auto_care'],
+    'auto_care': ['sporting_goods', 'fabric'],
+    'grocery_mid': ['red_junction_5', 'women_junction'],
+    'produce_junction': ['women_junction', 'red_junction_1'],
+    'seafood': ['bakery_junction', 'meat_poultry'],
+    'meat_poultry': ['dairy_top', 'seafood'],
+    'bakery_junction': ['seafood', 'red_junction_1'],
+    'girls_junction': ['baby_junction', 'baby_shoes'],
+    'women_junction': ['produce_junction','grocery_mid'],              
+    'boys_junction': ['baby_shoes', 'men_junction'],
+    'men_junction': ['boys_junction','electronics'],
+    'home_decor': ['red_junction_7', 'home_office'],
+    'home_office': ['home_decor', 'celebrate'],
+    'celebrate': ['home_office', 'jeweller'],
+    'jeweller': ['celebrate', 'red_junction_2'],
+    'storage_laundry': ['red_junction_6', 'home_mid'],
+    'home_mid': ['storage_laundry', 'kitchen_dining'],
+    'kitchen_dining': ['home_mid','seasonal'],
+    'seasonal': ['kitchen_dining', 'red_junction_3'],
+    'fabric': ['auto_care', 'paint_hardware'],
+    'bedding': ['paint_hardware', 'bath'],
+    'paint_hardware': ['fabric', 'bedding'],
+    'bath': ['bedding', 'red_junction_4'],
+    'cosmetics': ['red_junction_4', 'red_junction_3'],
+    'deli_entrance': ['left_entrance', 'red_junction_8'],
+    'main_entrance': ['red_junction_8'],
+    'left_entrance': ['deli_entrance'],
+    'checkouts_1': ['red_junction_1', 'red_junction_2'],
+    'checkouts_2': ['red_junction_2', 'red_junction_3'],
+    'right_entrance': ['red_junction_3', 'hair_salon'],
+    'pharmacy': ['health_beauty'],
+    'hair_salon': ['right_entrance', 'health_beauty'],
+    'health_beauty': ['hair_salon', 'pharmacy'],
+    'pet_care': ['red_junction_4'],
+    'garden_center': ['red_junction_4'],
+    'red_junction_1': ['red_junction_8', 'checkouts_1', 'bakery_junction', 'produce_junction'],
+    'red_junction_2': ['jeweller', 'checkouts_1', 'checkouts_2'],
+    'red_junction_3': ['checkouts_2', 'right_entrance', 'seasonal', 'cosmetics'],
+    'red_junction_4': ['pet_care', 'garden_center', 'cosmetics', 'bath'],
+    'red_junction_5': ['grocery_mid', 'dairy_top', 'baby_junction'],
+    'red_junction_6': ['storage_laundry', 'toys', 'sporting_goods'],
+    'red_junction_7': ['toys', 'books_junction', 'home_decor'],
+    'red_junction_8': ['main_entrance', 'deli_entrance']
   };
 
   const [currentPath, setCurrentPath] = useState([]);
