@@ -1,11 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Search, ShoppingCart, Package, Milk, Apple, Coffee, Droplets, Zap } from 'lucide-react';
-
+import { Search, ShoppingCart, Package, Milk, Apple, Coffee, Droplets, Zap, X } from 'lucide-react';
 const SelectItems = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [cartItems, setCartItems] = useState(new Set());
+  const [showCart, setShowCart] = useState(false);
 
-  // Sample supermarket inventory data
   const inventory = {
     "Fresh Produce": {
       icon: <Apple className="w-6 h-6" />,
@@ -81,10 +80,8 @@ const SelectItems = () => {
     }
   };
 
-  // Search functionality with fuzzy matching
   const filteredInventory = useMemo(() => {
     if (!searchTerm.trim()) return inventory;
-
     const filtered = {};
     Object.entries(inventory).forEach(([section, data]) => {
       const matchingItems = data.items.filter(item =>
@@ -109,8 +106,27 @@ const SelectItems = () => {
     });
   };
 
+  const handleRemoveFromCart = (itemId) => {
+    setCartItems(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(itemId);
+      return newSet;
+    });
+  };
+
   const totalItems = Object.values(inventory).reduce((total, section) => total + section.items.length, 0);
   const totalSections = Object.keys(inventory).length;
+
+  const cartItemDetails = [];
+  cartItems.forEach(id => {
+    for (const section of Object.values(inventory)) {
+      const item = section.items.find(i => i.id === id);
+      if (item) {
+        cartItemDetails.push(item);
+        break;
+      }
+    }
+  });
 
   return (
     <div style={{
@@ -126,7 +142,7 @@ const SelectItems = () => {
         borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
         position: 'sticky',
         top: 0,
-        zIndex: 1000,
+        zIndex: 1100,
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -149,13 +165,20 @@ const SelectItems = () => {
                 NavCart
               </h1>
             </div>
-            <div style={{
-              display: 'flex',
-              gap: '1.5rem',
-              fontSize: '0.875rem',
-              color: '#6b7280',
-              alignItems: 'center'
-            }}>
+            <div 
+              style={{
+                display: 'flex',
+                gap: '1.5rem',
+                fontSize: '0.875rem',
+                color: '#6b7280',
+                alignItems: 'center',
+                cursor: 'pointer',
+                userSelect: 'none'
+              }}
+              onClick={() => setShowCart(true)}
+              title="View cart"
+              aria-label="View cart items"
+            >
               <span>{totalSections} Sections</span>
               <span>{totalItems} Items</span>
               <div style={{
@@ -166,14 +189,14 @@ const SelectItems = () => {
                 fontWeight: '600',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem'
+                gap: '0.5rem',
+                userSelect: 'none'
               }}>
                 <ShoppingCart style={{ width: '1rem', height: '1rem' }} />
                 {cartItems.size}
               </div>
             </div>
           </div>
-
           {/* Search Bar */}
           <div style={{ position: 'relative' }}>
             <Search style={{
@@ -213,7 +236,6 @@ const SelectItems = () => {
           </div>
         </div>
       </div>
-
       {/* Main Content */}
       <div style={{
         maxWidth: '1200px',
@@ -292,7 +314,6 @@ const SelectItems = () => {
                     </p>
                   </div>
                 </div>
-
                 {/* Items Grid */}
                 <div style={{
                   padding: '1.5rem',
@@ -342,7 +363,6 @@ const SelectItems = () => {
                         }}>
                           {item.stock} in stock
                         </div>
-
                         <div style={{ marginTop: '1rem' }}>
                           <h3 style={{
                             fontSize: '1.125rem',
@@ -353,7 +373,7 @@ const SelectItems = () => {
                           }}>
                             {item.name}
                           </h3>
-                          
+
                           <div style={{
                             display: 'flex',
                             justifyContent: 'space-between',
@@ -375,11 +395,11 @@ const SelectItems = () => {
                                 {item.unit}
                               </div>
                             </div>
-                            
+
                             <button
                               style={{
-                                background: isInCart 
-                                  ? 'linear-gradient(135deg, #10b981, #059669)' 
+                                background: isInCart
+                                  ? 'linear-gradient(135deg, #10b981, #059669)'
                                   : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
                                 color: 'white',
                                 border: 'none',
@@ -395,8 +415,8 @@ const SelectItems = () => {
                               }}
                               onMouseEnter={(e) => {
                                 e.target.style.transform = 'scale(1.05)';
-                                e.target.style.boxShadow = isInCart 
-                                  ? '0 4px 15px rgba(16, 185, 129, 0.4)' 
+                                e.target.style.boxShadow = isInCart
+                                  ? '0 4px 15px rgba(16, 185, 129, 0.4)'
                                   : '0 4px 15px rgba(79, 70, 229, 0.4)';
                               }}
                               onMouseLeave={(e) => {
@@ -418,7 +438,6 @@ const SelectItems = () => {
           </div>
         )}
       </div>
-
       {/* Floating Stats */}
       <div style={{
         position: 'fixed',
@@ -441,8 +460,126 @@ const SelectItems = () => {
           {Object.values(filteredInventory).reduce((total, section) => total + section.items.length, 0)} items
         </div>
       </div>
+
+      {/* Cart Modal */}
+      {showCart && (
+        <div 
+          role="dialog" 
+          aria-modal="true" 
+          aria-labelledby="cart-title"
+          tabIndex={-1}
+          onClick={() => setShowCart(false)}
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.4)',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            zIndex: 1200,
+            backdropFilter: 'blur(5px)'
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'white',
+              width: '360px',
+              maxHeight: '100vh',
+              overflowY: 'auto',
+              borderRadius: '1rem 0 0 1rem',
+              boxShadow: '0 8px 40px rgba(0, 0, 0, 0.25)',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <div style={{
+              padding: '1rem 1.25rem',
+              borderBottom: '1px solid #e5e7eb',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+              color: 'white',
+              borderRadius: '1rem 0 0 0'
+            }}>
+              <h2 id="cart-title" style={{ margin: 0, fontWeight: 700, fontSize: '1.25rem' }}>
+                Your Cart ({cartItems.size})
+              </h2>
+              <button
+                onClick={() => setShowCart(false)}
+                aria-label="Close cart"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'white',
+                  cursor: 'pointer',
+                  padding: '0.25rem',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {cartItems.size === 0 ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+                Your Cart is Empty
+              </div>
+            ) : (
+              <ul style={{ listStyle: 'none', margin: 0, padding: '1rem 1.25rem', flexGrow: 1 }}>
+                {cartItemDetails.map(item => (
+                  <li key={item.id} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '0.75rem 0',
+                    borderBottom: '1px solid #e5e7eb'
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: '600', color: '#111827' }}>{item.name}</div>
+                      <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                        ${item.price.toFixed(2)} - {item.unit}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveFromCart(item.id)}
+                      style={{
+                        background: '#ef4444',
+                        border: 'none',
+                        color: 'white',
+                        borderRadius: '0.5rem',
+                        padding: '0.25rem 0.5rem',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        transition: 'background 0.2s ease'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#dc2626'}
+                      onMouseLeave={e => e.currentTarget.style.background = '#ef4444'}
+                      aria-label={`Remove ${item.name} from cart`}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {cartItems.size > 0 && (
+              <div style={{
+                padding: '1rem 1.25rem',
+                borderTop: '1px solid #e5e7eb',
+                fontWeight: '700',
+                fontSize: '1rem',
+                color: '#111827'
+              }}>
+                Total: ${cartItemDetails.reduce((sum, item) => sum + item.price, 0).toFixed(2)}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-
 export default SelectItems;
