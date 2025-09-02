@@ -3,12 +3,13 @@ import { Search, ShoppingCart, Package, Milk, Apple, Coffee, Droplets, Zap } fro
 
 const SelectItems = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [cartItems, setCartItems] = useState(new Set());
 
   // Sample supermarket inventory data
   const inventory = {
     "Fresh Produce": {
       icon: <Apple className="w-6 h-6" />,
-      color: "bg-green-500",
+      color: "#4f46e5",
       items: [
         { id: 1, name: "Bananas", price: 2.99, stock: 45, unit: "per bunch" },
         { id: 2, name: "Apples - Red Delicious", price: 3.49, stock: 32, unit: "per lb" },
@@ -22,7 +23,7 @@ const SelectItems = () => {
     },
     "Dairy & Eggs": {
       icon: <Milk className="w-6 h-6" />,
-      color: "bg-blue-500",
+      color: "#4f46e5",
       items: [
         { id: 9, name: "Milk - Whole 2%", price: 3.89, stock: 24, unit: "per gallon" },
         { id: 10, name: "Eggs - Large Grade A", price: 2.99, stock: 18, unit: "per dozen" },
@@ -34,7 +35,7 @@ const SelectItems = () => {
     },
     "Bakery": {
       icon: <Coffee className="w-6 h-6" />,
-      color: "bg-orange-500",
+      color: "#4f46e5",
       items: [
         { id: 15, name: "Whole Wheat Bread", price: 2.79, stock: 14, unit: "per loaf" },
         { id: 16, name: "Croissants - Fresh", price: 5.99, stock: 8, unit: "per 6-pack" },
@@ -45,7 +46,7 @@ const SelectItems = () => {
     },
     "Beverages": {
       icon: <Droplets className="w-6 h-6" />,
-      color: "bg-cyan-500",
+      color: "#4f46e5",
       items: [
         { id: 20, name: "Orange Juice - Fresh", price: 4.99, stock: 16, unit: "per 64oz" },
         { id: 21, name: "Coffee - Ground", price: 8.99, stock: 23, unit: "per 12oz bag" },
@@ -57,7 +58,7 @@ const SelectItems = () => {
     },
     "Frozen Foods": {
       icon: <Zap className="w-6 h-6" />,
-      color: "bg-purple-500",
+      color: "#4f46e5",
       items: [
         { id: 26, name: "Frozen Pizza - Pepperoni", price: 6.99, stock: 18, unit: "each" },
         { id: 27, name: "Ice Cream - Vanilla", price: 4.99, stock: 12, unit: "per pint" },
@@ -68,7 +69,7 @@ const SelectItems = () => {
     },
     "Pantry Essentials": {
       icon: <Package className="w-6 h-6" />,
-      color: "bg-amber-500",
+      color: "#4f46e5",
       items: [
         { id: 31, name: "Rice - Jasmine", price: 4.99, stock: 22, unit: "per 5lb bag" },
         { id: 32, name: "Pasta - Spaghetti", price: 1.99, stock: 35, unit: "per box" },
@@ -95,6 +96,18 @@ const SelectItems = () => {
     });
     return filtered;
   }, [searchTerm]);
+
+  const handleCartToggle = (itemId) => {
+    setCartItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
+  };
 
   const totalItems = Object.values(inventory).reduce((total, section) => total + section.items.length, 0);
   const totalSections = Object.keys(inventory).length;
@@ -133,17 +146,31 @@ const SelectItems = () => {
                 WebkitTextFillColor: 'transparent',
                 margin: 0
               }}>
-                FreshMart Inventory
+                NavCart
               </h1>
             </div>
             <div style={{
               display: 'flex',
               gap: '1.5rem',
               fontSize: '0.875rem',
-              color: '#6b7280'
+              color: '#6b7280',
+              alignItems: 'center'
             }}>
               <span>{totalSections} Sections</span>
               <span>{totalItems} Items</span>
+              <div style={{
+                background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                color: 'white',
+                padding: '0.5rem 1rem',
+                borderRadius: '2rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <ShoppingCart style={{ width: '1rem', height: '1rem' }} />
+                {cartItems.size}
+              </div>
             </div>
           </div>
 
@@ -164,7 +191,7 @@ const SelectItems = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
-                width: '100%',
+                width: '85%',
                 padding: '0.875rem 1rem 0.875rem 3rem',
                 fontSize: '1rem',
                 border: '2px solid transparent',
@@ -273,120 +300,118 @@ const SelectItems = () => {
                   gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
                   gap: '1rem'
                 }}>
-                  {sectionData.items.map((item) => (
-                    <div
-                      key={item.id}
-                      style={{
-                        background: 'linear-gradient(135deg, #ffffff, #f8fafc)',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '0.75rem',
-                        padding: '1.25rem',
-                        transition: 'all 0.3s ease',
-                        cursor: 'pointer',
-                        position: 'relative',
-                        overflow: 'hidden'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'linear-gradient(135deg, #f8fafc, #ffffff)';
-                        e.currentTarget.style.borderColor = sectionData.color.replace('bg-', '').replace('-500', '');
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                        e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'linear-gradient(135deg, #ffffff, #f8fafc)';
-                        e.currentTarget.style.borderColor = '#e2e8f0';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
-                    >
-                      {/* Stock indicator */}
-                      <div style={{
-                        position: 'absolute',
-                        top: '0.75rem',
-                        right: '0.75rem',
-                        background: item.stock > 20 ? '#10b981' : item.stock > 10 ? '#f59e0b' : '#ef4444',
-                        color: 'white',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '9999px'
-                      }}>
-                        {item.stock} in stock
-                      </div>
-
-                      <div style={{ marginTop: '1rem' }}>
-                        <h3 style={{
-                          fontSize: '1.125rem',
-                          fontWeight: '600',
-                          color: '#1f2937',
-                          margin: '0 0 0.5rem 0',
-                          lineHeight: '1.4'
-                        }}>
-                          {item.name}
-                        </h3>
-                        
+                  {sectionData.items.map((item) => {
+                    const isInCart = cartItems.has(item.id);
+                    return (
+                      <div
+                        key={item.id}
+                        style={{
+                          background: 'linear-gradient(135deg, #ffffff, #f8fafc)',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '0.75rem',
+                          padding: '1.25rem',
+                          transition: 'all 0.3s ease',
+                          cursor: 'pointer',
+                          position: 'relative',
+                          overflow: 'hidden'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'linear-gradient(135deg, #f8fafc, #ffffff)';
+                          e.currentTarget.style.borderColor = sectionData.color.replace('bg-', '').replace('-500', '');
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                          e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'linear-gradient(135deg, #ffffff, #f8fafc)';
+                          e.currentTarget.style.borderColor = '#e2e8f0';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      >
+                        {/* Stock indicator */}
                         <div style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          marginTop: '0.75rem'
+                          position: 'absolute',
+                          top: '0.75rem',
+                          right: '0.75rem',
+                          background: item.stock > 20 ? '#10b981' : item.stock > 10 ? '#f59e0b' : '#ef4444',
+                          color: 'white',
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '9999px'
                         }}>
-                          <div>
-                            <div style={{
-                              fontSize: '1.25rem',
-                              fontWeight: '700',
-                              color: '#059669'
-                            }}>
-                              ${item.price}
-                            </div>
-                            <div style={{
-                              fontSize: '0.875rem',
-                              color: '#6b7280'
-                            }}>
-                              {item.unit}
-                            </div>
-                          </div>
+                          {item.stock} in stock
+                        </div>
+
+                        <div style={{ marginTop: '1rem' }}>
+                          <h3 style={{
+                            fontSize: '1.125rem',
+                            fontWeight: '600',
+                            color: '#1f2937',
+                            margin: '0 0 0.5rem 0',
+                            lineHeight: '1.4'
+                          }}>
+                            {item.name}
+                          </h3>
                           
-                          <button
-                            style={{
-                              background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-                              color: 'white',
-                              border: 'none',
-                              padding: '0.5rem 1rem',
-                              borderRadius: '0.5rem',
-                              fontSize: '0.875rem',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.5rem'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.target.style.transform = 'scale(1.05)';
-                              e.target.style.boxShadow = '0 4px 15px rgba(79, 70, 229, 0.4)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.target.style.transform = 'scale(1)';
-                              e.target.style.boxShadow = 'none';
-                            }}
-                            onClick={(e) => {
-                              // Add to cart animation
-                              const button = e.target;
-                              button.style.background = '#10b981';
-                              button.textContent = 'Added!';
-                              setTimeout(() => {
-                                button.style.background = 'linear-gradient(135deg, #4f46e5, #7c3aed)';
-                                button.innerHTML = '<span style="display: flex; align-items: center; gap: 0.5rem;">Add to Cart</span>';
-                              }, 1000);
-                            }}
-                          >
-                            Add to Cart
-                          </button>
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginTop: '0.75rem'
+                          }}>
+                            <div>
+                              <div style={{
+                                fontSize: '1.25rem',
+                                fontWeight: '700',
+                                color: '#059669'
+                              }}>
+                                ${item.price}
+                              </div>
+                              <div style={{
+                                fontSize: '0.875rem',
+                                color: '#6b7280'
+                              }}>
+                                {item.unit}
+                              </div>
+                            </div>
+                            
+                            <button
+                              style={{
+                                background: isInCart 
+                                  ? 'linear-gradient(135deg, #10b981, #059669)' 
+                                  : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                                color: 'white',
+                                border: 'none',
+                                padding: '0.5rem 1rem',
+                                borderRadius: '0.5rem',
+                                fontSize: '0.875rem',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.target.style.transform = 'scale(1.05)';
+                                e.target.style.boxShadow = isInCart 
+                                  ? '0 4px 15px rgba(16, 185, 129, 0.4)' 
+                                  : '0 4px 15px rgba(79, 70, 229, 0.4)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.target.style.transform = 'scale(1)';
+                                e.target.style.boxShadow = 'none';
+                              }}
+                              onClick={() => handleCartToggle(item.id)}
+                            >
+                              {isInCart ? 'Added ✓' : 'Add to Cart'}
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}
