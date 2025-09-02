@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Play, RotateCcw, MapPin, ZoomIn, ZoomOut } from 'lucide-react';
 
-const App = () => {
+const FindPath = () => {
   const nodes = {
     'dairy_top': { x: 130, y: 48, label: 'Dairy' },
     'baby_junction': { x: 333, y: 78, label: 'Baby Section' },
+    'turn_1': { x: 225, y: 80, label: 'Turn'},
+    'turn_2': { x: 225, y: 50, label: 'Turn'},
+    'turn_3': { x: 50, y: 50, label: 'Turn'},
     'baby_shoes': { x: 457, y: 78, label: 'Shoes' },
     'electronics': { x: 600, y: 78, label: 'Electronics' },
     'books_junction': { x: 641, y: 78, label: 'Books' },
@@ -56,7 +59,7 @@ const App = () => {
   };
 
   const connections = {
-    'dairy_top': ['meat_poultry', 'red_junction_5'],
+    'dairy_top': ['turn_3', 'turn_2'],
     'baby_junction': ['girls_junction', 'red_junction_5'],
     'baby_shoes': ['boys_junction', 'girls_junction'],
     'electronics': ['men_junction', 'books_junction'],
@@ -67,7 +70,7 @@ const App = () => {
     'grocery_mid': ['red_junction_5', 'women_junction'],
     'produce_junction': ['women_junction', 'red_junction_1'],
     'seafood': ['bakery_junction', 'meat_poultry'],
-    'meat_poultry': ['dairy_top', 'seafood'],
+    'meat_poultry': ['turn_3', 'seafood'],
     'bakery_junction': ['seafood', 'red_junction_1'],
     'girls_junction': ['baby_junction', 'baby_shoes'],
     'women_junction': ['produce_junction','grocery_mid'],
@@ -97,11 +100,14 @@ const App = () => {
     'health_beauty': ['hair_salon', 'pharmacy'],
     'pet_care': ['red_junction_4'],
     'garden_center': ['red_junction_4'],
+    'turn_1':['red_junction_5', 'turn_2'],
+    'turn_2':['dairy_top', 'turn_1'],
+    'turn_3':['dairy_top', 'meat_poultry'],
     'red_junction_1': ['red_junction_8', 'checkouts_1', 'bakery_junction', 'produce_junction'],
     'red_junction_2': ['jeweller', 'checkouts_1', 'checkouts_2'],
     'red_junction_3': ['checkouts_2', 'right_entrance', 'seasonal', 'cosmetics'],
     'red_junction_4': ['pet_care', 'garden_center', 'cosmetics', 'bath'],
-    'red_junction_5': ['grocery_mid', 'dairy_top', 'baby_junction'],
+    'red_junction_5': ['grocery_mid', 'turn_1', 'baby_junction'],
     'red_junction_6': ['storage_laundry', 'toys', 'sporting_goods'],
     'red_junction_7': ['toys', 'books_junction', 'home_decor'],
     'red_junction_8': ['main_entrance', 'deli_entrance', 'red_junction_1']
@@ -682,4 +688,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default FindPath;
