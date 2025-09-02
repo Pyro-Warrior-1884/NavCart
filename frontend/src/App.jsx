@@ -2,9 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Play, RotateCcw, MapPin, ZoomIn, ZoomOut } from 'lucide-react';
 
 const App = () => {
-  // -----------------------------
-  // NODES (unchanged)
-  // -----------------------------
   const nodes = {
     'dairy_top': { x: 130, y: 48, label: 'Dairy' },
     'baby_junction': { x: 333, y: 78, label: 'Baby Section' },
@@ -58,9 +55,6 @@ const App = () => {
     'red_junction_8': { x: 280, y: 400, label: 'Junction 8' }
   };
 
-  // -----------------------------
-  // CONNECTIONS (fixed typos so all keys exist)
-  // -----------------------------
   const connections = {
     'dairy_top': ['meat_poultry', 'red_junction_5'],
     'baby_junction': ['girls_junction', 'red_junction_5'],
@@ -110,12 +104,12 @@ const App = () => {
     'red_junction_5': ['grocery_mid', 'dairy_top', 'baby_junction'],
     'red_junction_6': ['storage_laundry', 'toys', 'sporting_goods'],
     'red_junction_7': ['toys', 'books_junction', 'home_decor'],
-    'red_junction_8': ['main_entrance', 'deli_entrance']
+    'red_junction_8': ['main_entrance', 'deli_entrance', 'red_junction_1']
   };
 
-  // -----------------------------
-  // STATE
-  // -----------------------------
+  const checkouts = ['checkouts_1', 'checkouts_2'];
+  const exits = ['main_entrance', 'left_entrance', 'right_entrance'];
+
   const [currentPath, setCurrentPath] = useState([]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationStep, setAnimationStep] = useState(0);
@@ -126,225 +120,142 @@ const App = () => {
   const [computeMsg, setComputeMsg] = useState('');
   const storeImageData = "/Walmart.png";
 
-  // -----------------------------
-  // GEOMETRY + A* (strictly uses connections)
-  // -----------------------------
-  const distXY = (a, b) => {
-    const dx = nodes[a].x - nodes[b].x;
-    const dy = nodes[a].y - nodes[b].y;
-    return Math.hypot(dx, dy);
-  };
-
-  const heuristic = (a, b) => distXY(a, b);
-
-  const findPathAStar = (start, goal) => {
-    if (start === goal) return [start];
-
-    const open = new Set([start]);
-    const came = {};
-    const g = {};
-    const f = {};
-    const closed = new Set();
-
-    for (const k of Object.keys(nodes)) {
-      g[k] = Infinity;
-      f[k] = Infinity;
-    }
-    g[start] = 0;
-    f[start] = heuristic(start, goal);
-
-    while (open.size > 0) {
-      // get node with min f
-      let current = null;
-      let bestF = Infinity;
-      for (const n of open) {
-        if (f[n] < bestF) {
-          bestF = f[n];
-          current = n;
-        }
-      }
-
-      if (current === goal) {
-        const out = [current];
-        while (came[current]) {
-          current = came[current];
-          out.unshift(current);
-        }
-        return out;
-      }
-
-      open.delete(current);
-      closed.add(current);
-
-      for (const nb of (connections[current] || [])) {
-        if (!nodes[nb]) continue;        // guard: unknown key
-        if (closed.has(nb)) continue;
-
-        const tentative = g[current] + distXY(current, nb); // edge cost = allowed edge length
-        if (!open.has(nb)) open.add(nb);
-        if (tentative >= g[nb]) continue;
-
-        came[nb] = current;
-        g[nb] = tentative;
-        f[nb] = tentative + heuristic(nb, goal);
-      }
-    }
-
-    // unreachable
-    return null;
-  };
-
-  // -----------------------------
-  // All-pairs calculator + fast TSP (NN + 2-opt)
-  // -----------------------------
-  const precompute = (points) => {
-    const D = {};
-    const P = {};
-    for (const a of points) { D[a] = {}; P[a] = {}; }
-
-    for (let i = 0; i < points.length; i++) {
-      for (let j = i + 1; j < points.length; j++) {
-        const a = points[i], b = points[j];
-        const path = findPathAStar(a, b);
-        const d = path ? pathDistance(path) : Infinity;
-        D[a][b] = D[b][a] = d;
-        P[a][b] = P[b][a] = path; // may be null if unreachable
-      }
-    }
-    return { D, P };
-  };
-
-  const pathDistance = (path) => {
-    let d = 0;
-    for (let i = 1; i < path.length; i++) d += distXY(path[i-1], path[i]);
-    return d;
-  };
-
-  const nearestNeighborOrder = (start, targets, D) => {
-    const remaining = new Set(targets);
-    const order = [];
-    let cur = start;
-    while (remaining.size) {
-      let best = null, bestD = Infinity;
-      for (const t of remaining) {
-        const dd = D[cur][t];
-        if (dd < bestD) { bestD = dd; best = t; }
-      }
-      if (best == null || bestD === Infinity) break; // stop if anything unreachable
-      order.push(best);
-      remaining.delete(best);
-      cur = best;
-    }
-    // If something was unreachable, we stop early; caller will handle
-    return order;
-  };
-
-  const twoOptImprove = (start, seq, D, maxPasses = 2) => {
-    if (seq.length < 3) return seq.slice();
-    let path = seq.slice();
-    let improved = true;
-    let passes = 0;
-
-    const total = (s) => {
-      let acc = D[start][s[0]];
-      for (let i = 0; i < s.length - 1; i++) acc += D[s[i]][s[i+1]];
-      return acc;
-    };
-
-    while (improved && passes < maxPasses) {
-      improved = false;
-      for (let i = 0; i < path.length - 1; i++) {
-        for (let k = i + 1; k < path.length; k++) {
-          const newSeq = path.slice(0, i).concat(path.slice(i, k + 1).reverse(), path.slice(k + 1));
-          if (total(newSeq) + 1e-6 < total(path)) {
-            path = newSeq;
-            improved = true;
+  // Dijkstra's algorithm for shortest paths between given nodes
+  function dijkstraAllPairs(nodes, connections, keyNodes) {
+    const result = {};
+    keyNodes.forEach(start => {
+      const distances = {};
+      const previous = {};
+      const visited = {};
+      Object.keys(nodes).forEach(n => {
+        distances[n] = Infinity;
+        previous[n] = null;
+      });
+      distances[start] = 0;
+      const queue = [[0, start]];
+      while (queue.length) {
+        queue.sort(([a], [b]) => a - b);
+        const [, node] = queue.shift();
+        if (visited[node]) continue;
+        visited[node] = true;
+        for (const neighbor of connections[node] || []) {
+          if (!(neighbor in nodes)) continue;
+          const alt = distances[node] + 1;
+          if (alt < distances[neighbor]) {
+            distances[neighbor] = alt;
+            previous[neighbor] = node;
+            queue.push([alt, neighbor]);
           }
         }
       }
-      passes++;
+      result[start] = {};
+      keyNodes.forEach(end => {
+        if (distances[end] === Infinity) {
+          result[start][end] = { distance: Infinity, path: null };
+        } else {
+          const path = [];
+          let curr = end;
+          while (curr !== start) {
+            path.push(curr);
+            curr = previous[curr];
+            if (curr === null) break; // safety
+          }
+          path.push(start);
+          path.reverse();
+          result[start][end] = { distance: distances[end], path };
+        }
+      });
+    });
+    return result;
+  }
+
+  // Greedy nearest neighbor path order
+  function greedyVisitOrder(start, targets, allDist) {
+    const unvisited = new Set(targets);
+    let current = start;
+    const order = [];
+
+    while (unvisited.size > 0) {
+      let nearest = null;
+      let minDist = Infinity;
+      unvisited.forEach(t => {
+        const dist = allDist[current]?.[t]?.distance ?? Infinity;
+        if (dist < minDist) {
+          minDist = dist;
+          nearest = t;
+        }
+      });
+      if (!nearest) break;
+      order.push(nearest);
+      unvisited.delete(nearest);
+      current = nearest;
     }
-    return path;
+    return order;
+  }
+
+  // Find nearest node helper
+  function findNearest(from, pool, allDist) {
+    let minNode = null;
+    let minDist = Infinity;
+    pool.forEach(node => {
+      const dist = allDist[from]?.[node]?.distance ?? Infinity;
+      if (dist < minDist) {
+        minDist = dist;
+        minNode = node;
+      }
+    });
+    return minNode;
+  }
+
+  // Compute the full path combining order and edges
+  const computeHybridPath = (start, targets) => {
+    const keySet = [start, ...targets, ...checkouts, ...exits];
+    const allDist = dijkstraAllPairs(nodes, connections, keySet);
+
+    const visitOrder = greedyVisitOrder(start, targets, allDist);
+
+    let fullPath = [];
+    let prev = start;
+
+    visitOrder.forEach(target => {
+      if (!allDist[prev] || !allDist[prev][target]) return;
+      let path = allDist[prev][target].path;
+      if (!path) return;
+      if (fullPath.length > 0) path = path.slice(1);
+      fullPath = fullPath.concat(path);
+      prev = target;
+    });
+
+    const nearestCheckout = findNearest(prev, checkouts, allDist);
+    if (nearestCheckout && allDist[prev]?.[nearestCheckout]?.path) {
+      fullPath = fullPath.concat(allDist[prev][nearestCheckout].path.slice(1));
+      prev = nearestCheckout;
+    }
+
+    const nearestExit = findNearest(prev, exits, allDist);
+    if (nearestExit && allDist[prev]?.[nearestExit]?.path) {
+      fullPath = fullPath.concat(allDist[prev][nearestExit].path.slice(1));
+    }
+
+    const stopOrder = [start, ...visitOrder, nearestCheckout, nearestExit].filter(Boolean);
+
+    return { fullPath, stopOrder };
   };
 
-  // Builds the final full path with checkouts + best exit
-  const computeOptimizedPath = (start, targets) => {
-    setComputeMsg('Building distance cache…');
-    const exits = ['main_entrance', 'left_entrance', 'right_entrance'];
-    const checkouts = ['checkouts_1', 'checkouts_2'];
-
-    const points = [start, ...targets, ...checkouts, ...exits];
-    const { D, P } = precompute(points);
-
-    // Guard: if any target is completely unreachable from start, stop early
-    for (const t of targets) {
-      if (!P[start][t]) throw new Error(`No path from ${nodes[start].label} to ${nodes[t].label}`);
-    }
-
-    setComputeMsg('Finding fast visiting order…');
-    const seed = nearestNeighborOrder(start, targets, D);
-    if (seed.length !== targets.length) {
-      const bad = targets.filter(t => !seed.includes(t));
-      throw new Error(`Unreachable stops: ${bad.map(k => nodes[k].label).join(', ')}`);
-    }
-    const order = twoOptImprove(start, seed, D, 2);
-
-    // Choose nearest checkout from last stop
-    const lastStop = order[order.length - 1] ?? start;
-    let bestCheckout = checkouts[0];
-    let bestCheckoutD = D[lastStop][bestCheckout];
-    for (const c of checkouts) {
-      if (D[lastStop][c] < bestCheckoutD) {
-        bestCheckout = c; bestCheckoutD = D[lastStop][c];
-      }
-    }
-    if (!isFinite(bestCheckoutD)) {
-      throw new Error(`No path from last stop to any checkout.`);
-    }
-
-    // Choose nearest exit from the chosen checkout
-    let bestExit = exits[0];
-    let bestExitD = D[bestCheckout][bestExit];
-    for (const e of exits) {
-      if (D[bestCheckout][e] < bestExitD) {
-        bestExit = e; bestExitD = D[bestCheckout][e];
-      }
-    }
-    if (!isFinite(bestExitD)) {
-      throw new Error(`No path from checkout to any exit.`);
-    }
-
-    // Stitch the full node-by-node path
-    setComputeMsg('Stitching final path…');
-    const stops = [start, ...order, bestCheckout, bestExit];
-    let fullPath = [stops[0]];
-    for (let i = 0; i < stops.length - 1; i++) {
-      const seg = P[stops[i]][stops[i+1]];
-      if (!seg) throw new Error(`No path between ${nodes[stops[i]].label} and ${nodes[stops[i+1]].label}`);
-      fullPath = fullPath.concat(seg.slice(1)); // avoid duplicate node at join
-    }
-
-    return { fullPath, stopOrder: stops };
-  };
-
-  // -----------------------------
-  // UI controls
-  // -----------------------------
   const startNavigation = async () => {
     if (!Entrance) {
       alert('⚠ Please select an entrance before starting navigation!');
       return;
     }
-
-    const shoppingSections = [ 'dairy_top', 'baby_junction', 'baby_shoes', 'electronics', 'books_junction', 'toys', 'sporting_goods', 'auto_care', 'grocery_mid', 'produce_junction', 'seafood', 'meat_poultry', 'bakery_junction', 'girls_junction', 'women_junction', 'boys_junction', 'men_junction', 'home_decor', 'home_office', 'celebrate', 'jeweller', 'storage_laundry', 'home_mid', 'kitchen_dining', 'seasonal', 'fabric', 'bedding', 'paint_hardware', 'bath', 'cosmetics', 'deli_entrance', 'pharmacy', 'hair_salon', 'health_beauty', 'pet_care', 'garden_center' ];
-
+    // Targets to visit (unchanged)
+    const shoppingSections = [ 
+      'dairy_top', 'baby_junction', 'baby_shoes', 'electronics', 'books_junction', 'toys', 'sporting_goods', 'auto_care', 'grocery_mid', 'produce_junction', 'seafood', 'meat_poultry', 'bakery_junction', 'girls_junction', 'women_junction', 'boys_junction', 'men_junction', 'home_decor', 'home_office', 'celebrate', 'jeweller', 'storage_laundry', 'home_mid', 'kitchen_dining', 'seasonal', 'fabric', 'bedding', 'paint_hardware', 'bath', 'cosmetics', 'deli_entrance', 'pharmacy', 'hair_salon', 'health_beauty', 'pet_care', 'garden_center' 
+    ];
     setIsComputing(true);
     setComputeMsg('Starting…');
-
-    
     setTimeout(() => {
       try {
-        const { fullPath, stopOrder } = computeOptimizedPath(Entrance, shoppingSections);
+        const { fullPath, stopOrder } = computeHybridPath(Entrance, shoppingSections);
         setSelectedSections(stopOrder); 
         setCurrentPath(fullPath);
         setAnimationStep(0);
@@ -381,9 +292,6 @@ const App = () => {
     }
   }, [isAnimating, animationStep, currentPath.length]);
 
-  // -----------------------------
-  // STYLES (unchanged)
-  // -----------------------------
   const containerStyle = {
     width: '100%',
     padding: '16px',
