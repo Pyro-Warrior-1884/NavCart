@@ -5,6 +5,6 @@ import SelectItems from './SelectItems.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <SelectItems />
+    <FindPath />
   </StrictMode>,
 )
