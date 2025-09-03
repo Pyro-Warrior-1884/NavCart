@@ -1,6 +1,3 @@
-// Pathfinding utility functions
-
-// Dijkstra's algorithm for shortest paths between given nodes
 export function dijkstraAllPairs(nodes, connections, keyNodes) {
   const result = {};
   keyNodes.forEach(start => {
@@ -54,7 +51,6 @@ export function dijkstraAllPairs(nodes, connections, keyNodes) {
   return result;
 }
 
-// Greedy nearest neighbor path order
 export function greedyVisitOrder(start, targets, allDist) {
   const unvisited = new Set(targets);
   let current = start;
