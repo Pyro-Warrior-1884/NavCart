@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Play, RotateCcw, MapPin, ZoomIn, ZoomOut, Navigation, Route, Target } from 'lucide-react';
+import { Play, RotateCcw, MapPin, ZoomIn, ZoomOut, Navigation, Route, Target, ArrowLeft } from 'lucide-react';
 import { computeHybridPath } from './pathfinding';
+import SelectItems from './SelectItems';
 
-const FindPath = () => {
+const FindPath = ({ onBackToItems }) => {
   const nodes = {
     'dairy_top': { x: 130, y: 48, label: 'Dairy' },
     'baby_junction': { x: 333, y: 78, label: 'Baby Section' },
@@ -187,6 +188,11 @@ const FindPath = () => {
     }
   }, [isAnimating, animationStep, currentPath.length]);
 
+  const handleBackToItems = () => {
+    if (onBackToItems) onBackToItems();
+  };
+
+
   const mapContainerStyle = {
     position: 'relative',
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -232,6 +238,46 @@ const FindPath = () => {
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
         border: '1px solid rgba(255, 255, 255, 0.2)'
       }}>
+        {/* Back Button */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          marginBottom: '1.5rem'
+        }}>
+          <button
+            onClick={handleBackToItems}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.875rem 1.5rem',
+              borderRadius: '0.75rem',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: '600',
+              background: 'linear-gradient(135deg, #6b7280, #4b5563)',
+              color: 'white',
+              boxShadow: '0 4px 15px rgba(107, 114, 128, 0.25)',
+              transition: 'all 0.3s ease',
+              marginRight: '1rem'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 8px 25px rgba(107, 114, 128, 0.35)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 4px 15px rgba(107, 114, 128, 0.25)';
+            }}
+          >
+            <ArrowLeft size={18} />
+            Back to Items
+          </button>
+        </div>
+
+        {/* Title Section */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -332,10 +378,11 @@ const FindPath = () => {
               fontWeight: '600',
               background: Entrance && !isComputing 
                 ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' 
-                : 'linear-gradient(135deg, #fb5f5fff, #e46262ff)',
+                : 'linear-gradient(135deg, #9ca3af, #6b7280)',
               color: 'white',
               boxShadow: '0 4px 15px rgba(79, 70, 229, 0.25)',
-              transition: 'all 0.3s ease'
+              transition: 'all 0.3s ease',
+              opacity: Entrance && !isComputing ? 1 : 0.6
             }}
             onMouseEnter={(e) => {
               if (Entrance && !isComputing) {
@@ -802,4 +849,4 @@ const FindPath = () => {
   );
 };
 
-export default FindPath;
+export default FindPath

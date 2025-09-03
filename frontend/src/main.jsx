@@ -1,10 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import FindPath from './FindPath.jsx'
-import SelectItems from './SelectItems.jsx'
+import NavigationPage from './Navigation.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <FindPath />
+    <NavigationPage />
   </StrictMode>,
 )

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search, ShoppingCart, X } from 'lucide-react';
+import FindPath from './FindPath';
 
 const SelectItems = () => {
   const [searchTerm, setSearchTerm] = useState('');
