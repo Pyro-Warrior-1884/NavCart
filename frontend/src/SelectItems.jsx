@@ -1,14 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { Search, ShoppingCart, X } from 'lucide-react';
+import FindPath from './FindPath';
 
 const SelectItems = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [cartItems, setCartItems] = useState(new Set());
   const [showCart, setShowCart] = useState(false);
   const [showPathModal, setShowPathModal] = useState(false);
-  const [cartSections, setCartSections] = useState(new Set()); // New state for tracking sections
+  const [cartSections, setCartSections] = useState(new Set()); 
+  const [showFindPath, setShowFindPath] = useState(false);
 
-  // Section mapping based on your nodes
   const sectionMapping = {
     "Dairy": "dairy_top",
     "Baby Section": "baby_junction",
@@ -47,7 +48,6 @@ const SelectItems = () => {
     "Pet Care": "pet_care",
     "Garden Center": "garden_center"
   };
-
 
   const inventory = {
     "Dairy": {
@@ -376,40 +376,6 @@ const SelectItems = () => {
     }
   };
 
-  // Helper function to find which section an item belongs to
-  const findItemSection = (itemId) => {
-    for (const [sectionName, sectionData] of Object.entries(inventory)) {
-      const item = sectionData.items.find(item => item.id === itemId);
-      if (item) {
-        return sectionName;
-      }
-    }
-    return null;
-  };
-
-  // Helper function to check if a section has any items in cart
-  const sectionHasItemsInCart = (sectionName) => {
-    const sectionItems = inventory[sectionName].items;
-    return sectionItems.some(item => cartItems.has(item.id));
-  };
-
-  // Helper function to update cart sections
-  const updateCartSections = (newCartItems) => {
-    const newSections = new Set();
-    
-    newCartItems.forEach(itemId => {
-      const sectionName = findItemSection(itemId);
-      if (sectionName && sectionMapping[sectionName]) {
-        newSections.add(sectionMapping[sectionName]);
-      }
-    });
-    
-    setCartSections(newSections);
-    
-    // Debug log to see the sections
-    console.log('Cart sections updated:', Array.from(newSections));
-  };
-
   const filteredInventory = useMemo(() => {
     if (!searchTerm.trim()) return inventory;
     const filtered = {};
@@ -424,6 +390,47 @@ const SelectItems = () => {
     return filtered;
   }, [searchTerm]);
 
+  if (showFindPath) {
+    return (
+      <FindPath
+        selectedSections={[...cartSections]}
+        onBackToItems={() => setShowFindPath(false)}
+      />
+    );
+  }
+
+  const handleConfirmAndGenerate = () => {
+    if (cartSections.size === 0) {
+      alert("⚠ Please select at least one item before generating a path!");
+      return;
+    }
+    setShowFindPath(true); 
+  };
+
+  const findItemSection = (itemId) => {
+    for (const [sectionName, sectionData] of Object.entries(inventory)) {
+      const item = sectionData.items.find(item => item.id === itemId);
+      if (item) {
+        return sectionName;
+      }
+    }
+    return null;
+  };
+
+  const updateCartSections = (newCartItems) => {
+    const newSections = new Set();
+    
+    newCartItems.forEach(itemId => {
+      const sectionName = findItemSection(itemId);
+      if (sectionName && sectionMapping[sectionName]) {
+        newSections.add(sectionMapping[sectionName]);
+      }
+    });
+    
+    setCartSections(newSections);
+    console.log('Cart sections updated:', Array.from(newSections));
+  };
+
   const handleCartToggle = (itemId) => {
     setCartItems(prev => {
       const newSet = new Set(prev);
@@ -433,9 +440,7 @@ const SelectItems = () => {
         newSet.add(itemId);
       }
       
-      // Update sections after cart change
-      updateCartSections(newSet);
-      
+      updateCartSections(newSet);      
       return newSet;
     });
   };
@@ -444,10 +449,7 @@ const SelectItems = () => {
     setCartItems(prev => {
       const newSet = new Set(prev);
       newSet.delete(itemId);
-      
-      // Update sections after cart change
-      updateCartSections(newSet);
-      
+      updateCartSections(newSet);      
       return newSet;
     });
   };
@@ -951,11 +953,7 @@ const SelectItems = () => {
                       Cancel
                     </button>
                     <button
-                      onClick={() => {
-                        // TODO: Handle path confirmation
-                        console.log('Confirm path generation for items:', cartItemDetails);
-                        console.log('Cart sections to visit:', Array.from(cartSections));
-                      }}
+                      onClick={handleConfirmAndGenerate}
                       style={{
                         background: 'linear-gradient(135deg, #059669, #047857)',
                         border: 'none',

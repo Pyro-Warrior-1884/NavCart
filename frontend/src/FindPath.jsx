@@ -3,7 +3,7 @@ import { Play, RotateCcw, MapPin, ZoomIn, ZoomOut, Navigation, Route, Target, Ar
 import { computeHybridPath } from './pathfinding';
 import SelectItems from './SelectItems';
 
-const FindPath = ({ onBackToItems }) => {
+const FindPath = ({ selectedSections, onBackToItems }) => {
   const nodes = {
     'dairy_top': { x: 130, y: 48, label: 'Dairy' },
     'baby_junction': { x: 333, y: 78, label: 'Baby Section' },
@@ -120,7 +120,7 @@ const FindPath = ({ onBackToItems }) => {
   const [currentPath, setCurrentPath] = useState([]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationStep, setAnimationStep] = useState(0);
-  const [selectedSections, setSelectedSections] = useState([]);
+  const [chosenSections, setChosenSections] = useState(selectedSections);
   const [zoomLevel, setZoomLevel] = useState(0.8);
   const [Entrance, setEntrance] = useState("");
   const [isComputing, setIsComputing] = useState(false);
@@ -134,9 +134,8 @@ const FindPath = ({ onBackToItems }) => {
       return;
     }
 
-    const shoppingSections = [
-      'dairy_top', 'baby_junction', 'baby_shoes', 'electronics', 'books_junction', 'toys', 'sporting_goods', 'auto_care', 'grocery_mid', 'produce_junction', 'seafood', 'meat_poultry', 'bakery_junction', 'girls_junction', 'women_junction', 'boys_junction', 'men_junction', 'home_decor', 'home_office', 'celebrate', 'jeweller', 'storage_laundry', 'home_mid', 'kitchen_dining', 'seasonal', 'fabric', 'bedding', 'paint_hardware', 'bath', 'cosmetics', 'deli_entrance', 'pharmacy', 'hair_salon', 'health_beauty', 'pet_care', 'garden_center'
-    ];
+    const shoppingSections = selectedSections && selectedSections.length > 0 ? selectedSections : [];
+
 
     setIsComputing(true);
     setComputeMsg('Starting…');
@@ -152,7 +151,7 @@ const FindPath = ({ onBackToItems }) => {
           exits
         );
 
-        setSelectedSections(stopOrder);
+        setChosenSections(stopOrder);
         setCurrentPath(fullPath);
         setAnimationStep(0);
         setIsAnimating(true);
@@ -168,7 +167,7 @@ const FindPath = ({ onBackToItems }) => {
 
   const resetNavigation = () => {
     setCurrentPath([]);
-    setSelectedSections([]);
+    setChosenSections(selectedSections);
     setAnimationStep(0);
     setIsAnimating(false);
     setEntrance("");
@@ -535,7 +534,7 @@ const FindPath = ({ onBackToItems }) => {
               lineHeight: '1.5',
               fontWeight: '500'
             }}>
-              {selectedSections.map(section => nodes[section]?.label).join(' → ')}
+              {chosenSections.map(section => nodes[section]?.label).join(' → ')}
             </div>
           </div>
         )}
