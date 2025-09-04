@@ -52,7 +52,7 @@ const SelectItems = () => {
   const inventory = {
     "Dairy": {
       items: [
-        { id: 1, name: "Organic Whole Milk", price: 4.99, stock: 35, unit: "per gallon" },
+        { id: 1, name: "Organic Whole Milk", price: 4.99, stock: 10, unit: "per gallon" },
         { id: 2, name: "Free Range Eggs", price: 3.49, stock: 42, unit: "per dozen" },
         { id: 3, name: "Sharp Cheddar Cheese", price: 5.99, stock: 28, unit: "per 12oz block" },
         { id: 4, name: "Greek Yogurt - Vanilla", price: 1.79, stock: 56, unit: "per 6oz cup" },
@@ -474,7 +474,6 @@ const SelectItems = () => {
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
-      {/* Header */}
       <div style={{
         background: 'rgba(255, 255, 255, 0.95)',
         backdropFilter: 'blur(10px)',

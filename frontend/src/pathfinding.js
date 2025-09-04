@@ -74,7 +74,6 @@ export function greedyVisitOrder(start, targets, allDist) {
   return order;
 }
 
-// Find nearest node helper
 export function findNearest(from, pool, allDist) {
   let minNode = null;
   let minDist = Infinity;
@@ -88,7 +87,6 @@ export function findNearest(from, pool, allDist) {
   return minNode;
 }
 
-// Main hybrid path calculation
 export function computeHybridPath(start, targets, nodes, connections, checkouts, exits) {
   const keySet = [start, ...targets, ...checkouts, ...exits];
   const allDist = dijkstraAllPairs(nodes, connections, keySet);

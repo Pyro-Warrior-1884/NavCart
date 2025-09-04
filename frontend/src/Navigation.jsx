@@ -3,7 +3,7 @@ import FindPath from "./FindPath";
 import SelectItems from "./SelectItems";
 
 const NavigationPage = () => {
-  const [showFindPath, setShowFindPath] = useState(false); // Default to SelectItems
+  const [showFindPath, setShowFindPath] = useState(false);
 
   const handleBackToItems = () => setShowFindPath(false);
 
