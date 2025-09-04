@@ -182,7 +182,7 @@ const FindPath = ({ selectedSections = ['dairy_top', 'electronics', 'toys'], onB
 
   useEffect(() => {
     if (isAnimating && animationStep < currentPath.length - 1) {
-      const timer = setTimeout(() => setAnimationStep(prev => prev + 1), 500);
+      const timer = setTimeout(() => setAnimationStep(prev => prev + 1), 2000);
       return () => clearTimeout(timer);
     } else if (isAnimating && animationStep >= currentPath.length - 1) {
       setIsAnimating(false);
