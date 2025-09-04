@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Play, RotateCcw, MapPin, ZoomIn, ZoomOut, ShoppingCart, Route, Target, ArrowLeft } from 'lucide-react';
 import {computeHybridPath} from './pathfinding'
 
@@ -124,6 +124,13 @@ const FindPath = ({ selectedSections = ['dairy_top', 'electronics', 'toys'], onB
   const [Entrance, setEntrance] = useState("");
   const [isComputing, setIsComputing] = useState(false);
   const [computeMsg, setComputeMsg] = useState('');
+  
+  // Pan and drag state
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const mapRef = useRef(null);
 
   const storeImageData = "./Walmart.png";
 
@@ -171,6 +178,7 @@ const FindPath = ({ selectedSections = ['dairy_top', 'electronics', 'toys'], onB
     setEntrance("");
     setIsComputing(false);
     setComputeMsg('');
+    setPanOffset({ x: 0, y: 0 });
   };
 
   const zoomIn = () => setZoomLevel(prev => Math.min(prev + 0.2, 2.0));
@@ -178,6 +186,65 @@ const FindPath = ({ selectedSections = ['dairy_top', 'electronics', 'toys'], onB
 
   const handleBackToItems = () => {
     if (onBackToItems) onBackToItems();
+  };
+
+  // Mouse event handlers for panning
+  const handleMouseDown = (e) => {
+    if (e.button !== 0) return; // Only left mouse button
+    setIsDragging(true);
+    setDragStart({ x: e.clientX, y: e.clientY });
+    setDragOffset(panOffset);
+    e.preventDefault();
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    
+    const deltaX = e.clientX - dragStart.x;
+    const deltaY = e.clientY - dragStart.y;
+    
+    setPanOffset({
+      x: dragOffset.x + deltaX,
+      y: dragOffset.y + deltaY
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  // Touch event handlers for mobile panning
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      setDragStart({ 
+        x: e.touches[0].clientX, 
+        y: e.touches[0].clientY 
+      });
+      setDragOffset(panOffset);
+      e.preventDefault();
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    
+    const deltaX = e.touches[0].clientX - dragStart.x;
+    const deltaY = e.touches[0].clientY - dragStart.y;
+    
+    setPanOffset({
+      x: dragOffset.x + deltaX,
+      y: dragOffset.y + deltaY
+    });
+    e.preventDefault();
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
   };
 
   useEffect(() => {
@@ -188,6 +255,11 @@ const FindPath = ({ selectedSections = ['dairy_top', 'electronics', 'toys'], onB
       setIsAnimating(false);
     }
   }, [isAnimating, animationStep, currentPath.length]);
+
+  // Reset pan when zoom changes
+  useEffect(() => {
+    setPanOffset({ x: 0, y: 0 });
+  }, [zoomLevel]);
 
   const mapContainerStyle = {
     position: 'relative',
@@ -202,7 +274,8 @@ const FindPath = ({ selectedSections = ['dairy_top', 'electronics', 'toys'], onB
     maxHeight: '70vh',
     transition: 'all 0.3s ease',
     boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-    backdropFilter: 'blur(10px)'
+    backdropFilter: 'blur(10px)',
+    cursor: isDragging ? 'grabbing' : 'grab'
   };
 
   const mapBackgroundStyle = {
@@ -214,7 +287,9 @@ const FindPath = ({ selectedSections = ['dairy_top', 'electronics', 'toys'], onB
     backgroundRepeat: 'no-repeat',
     backgroundPosition: '0 0',
     margin: '20px auto',
-    transition: 'width 0.3s ease, height 0.3s ease'
+    transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+    transition: isDragging ? 'none' : 'width 0.3s ease, height 0.3s ease, transform 0.3s ease',
+    userSelect: 'none'
   };
 
   return (
@@ -295,7 +370,6 @@ const FindPath = ({ selectedSections = ['dairy_top', 'electronics', 'toys'], onB
             </h1>
           </div>
 
-          {/* Right: Zoom Level Display */}
           <div style={{
             padding: '0.75rem 1.25rem',
             background: 'rgba(79, 70, 229, 0.1)',
@@ -558,7 +632,17 @@ const FindPath = ({ selectedSections = ['dairy_top', 'electronics', 'toys'], onB
             </h2>
           </div>
 
-          <div style={mapContainerStyle}>
+          <div 
+            ref={mapRef}
+            style={mapContainerStyle}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
             {/* Loading Overlay */}
             {isComputing && (
               <div style={{
@@ -613,7 +697,8 @@ const FindPath = ({ selectedSections = ['dairy_top', 'electronics', 'toys'], onB
                       zIndex: 100,
                       boxShadow: `0 ${4 * zoomLevel}px ${8 * zoomLevel}px rgba(0,0,0,0.25)`,
                       transition: 'all 0.3s ease',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      pointerEvents: 'none' // Prevent interference with dragging
                     }}
                     title={node.label}
                   />
@@ -653,7 +738,8 @@ const FindPath = ({ selectedSections = ['dairy_top', 'electronics', 'toys'], onB
                       transform: `rotate(${angle}deg)`,
                       zIndex: 90,
                       boxShadow: `0 0 ${8 * zoomLevel}px rgba(239, 68, 68, 0.6)`,
-                      borderRadius: `${3 * zoomLevel}px`
+                      borderRadius: `${3 * zoomLevel}px`,
+                      pointerEvents: 'none' // Prevent interference with dragging
                     }}
                   />
                 );
@@ -676,7 +762,8 @@ const FindPath = ({ selectedSections = ['dairy_top', 'electronics', 'toys'], onB
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    animation: 'pulse 2s infinite'
+                    animation: 'pulse 2s infinite',
+                    pointerEvents: 'none' // Prevent interference with dragging
                   }}
                 >
                   <MapPin size={20 * zoomLevel} color="white" />
@@ -704,7 +791,8 @@ const FindPath = ({ selectedSections = ['dairy_top', 'electronics', 'toys'], onB
                       boxShadow: `0 ${4 * zoomLevel}px ${8 * zoomLevel}px rgba(0,0,0,0.3)`,
                       fontSize: `${16 * zoomLevel}px`,
                       fontWeight: 'bold',
-                      color: 'white'
+                      color: 'white',
+                      pointerEvents: 'none' // Prevent interference with dragging
                     }}
                   >
                     S
@@ -728,7 +816,8 @@ const FindPath = ({ selectedSections = ['dairy_top', 'electronics', 'toys'], onB
                       boxShadow: `0 ${4 * zoomLevel}px ${8 * zoomLevel}px rgba(0,0,0,0.3)`,
                       fontSize: `${16 * zoomLevel}px`,
                       fontWeight: 'bold',
-                      color: 'white'
+                      color: 'white',
+                      pointerEvents: 'none' // Prevent interference with dragging
                     }}
                   >
                     E
@@ -840,6 +929,7 @@ const FindPath = ({ selectedSections = ['dairy_top', 'electronics', 'toys'], onB
                 <strong style={{ color: '#374151' }}>Map Controls:</strong>
                 <ul style={{ listStyle: 'disc', marginLeft: '20px', marginTop: '8px' }}>
                   <li>Use zoom controls to scale the view</li>
+                  <li>Click and drag to pan around</li>
                   <li>White dots are navigation waypoints</li>
                   <li>Blue dots show your planned route</li>
                 </ul>
@@ -850,6 +940,7 @@ const FindPath = ({ selectedSections = ['dairy_top', 'electronics', 'toys'], onB
                   <li>Red lines connect route waypoints</li>
                   <li>Green 'S' marks your starting point</li>
                   <li>Purple 'E' marks the exit point</li>
+                  <li>Red pin shows current location</li>
                 </ul>
               </div>
             </div>
