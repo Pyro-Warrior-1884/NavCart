@@ -52,7 +52,7 @@ const SelectItems = () => {
   const inventory = {
     "Dairy": {
       items: [
-        { id: 1, name: "Organic Whole Milk", price: 4.99, stock: 10, unit: "per gallon" },
+        { id: 1, name: "Organic Whole Milk", price: 4.99, stock: 0, unit: "per gallon" },
         { id: 2, name: "Free Range Eggs", price: 3.49, stock: 42, unit: "per dozen" },
         { id: 3, name: "Sharp Cheddar Cheese", price: 5.99, stock: 28, unit: "per 12oz block" },
         { id: 4, name: "Greek Yogurt - Vanilla", price: 1.79, stock: 56, unit: "per 6oz cup" },
@@ -417,6 +417,16 @@ const SelectItems = () => {
     return null;
   };
 
+  const validateStock = (itemId) => {
+    for (const section of Object.values(inventory)) {
+      const item = section.items.find(i => i.id === itemId);
+      if (item) {
+        return item.stock > 0;
+      }
+    }
+    return false;
+  };
+
   const updateCartSections = (newCartItems) => {
     const newSections = new Set();
     
@@ -432,6 +442,12 @@ const SelectItems = () => {
   };
 
   const handleCartToggle = (itemId) => {
+    const isInStock = validateStock(itemId);
+
+    if (!isInStock) {
+      return;
+    }
+
     setCartItems(prev => {
       const newSet = new Set(prev);
       if (newSet.has(itemId)) {
@@ -759,27 +775,32 @@ const SelectItems = () => {
                             </div>
 
                             <button
+                              disabled={item.stock <= 0}
                               style={{
-                                background: isInCart
-                                  ? 'linear-gradient(135deg, #10b981, #059669)'
-                                  : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                                background: item.stock <= 0
+                                  ? '#fd3333ff'
+                                  : isInCart
+                                    ? 'linear-gradient(135deg, #10b981, #059669)'
+                                    : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                                cursor: item.stock <= 0 ? 'not-allowed' : 'pointer',
                                 color: 'white',
                                 border: 'none',
                                 padding: '0.5rem 1rem',
                                 borderRadius: '0.5rem',
                                 fontSize: '0.875rem',
                                 fontWeight: '600',
-                                cursor: 'pointer',
                                 transition: 'all 0.2s ease',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.5rem'
                               }}
                               onMouseEnter={(e) => {
-                                e.target.style.transform = 'scale(1.05)';
-                                e.target.style.boxShadow = isInCart
-                                  ? '0 4px 15px rgba(16, 185, 129, 0.4)'
-                                  : '0 4px 15px rgba(79, 70, 229, 0.4)';
+                                if (item.stock > 0) {
+                                  e.target.style.transform = 'scale(1.05)';
+                                  e.target.style.boxShadow = isInCart
+                                    ? '0 4px 15px rgba(16, 185, 129, 0.4)'
+                                    : '0 4px 15px rgba(79, 70, 229, 0.4)';
+                                }
                               }}
                               onMouseLeave={(e) => {
                                 e.target.style.transform = 'scale(1)';
@@ -787,7 +808,11 @@ const SelectItems = () => {
                               }}
                               onClick={() => handleCartToggle(item.id)}
                             >
-                              {isInCart ? 'Added ✓' : 'Add to Cart'}
+                              {item.stock <= 0
+                                ? 'Out of Stock'
+                                : isInCart
+                                  ? 'Added ✓'
+                                  : 'Add to Cart'}
                             </button>
                           </div>
                         </div>
